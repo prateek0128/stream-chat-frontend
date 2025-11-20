@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "531442407283",
+    "project_id": "expoapp-54efa",
+    "storage_bucket": "expoapp-54efa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:531442407283:android:51af7eaa504f662f885706",
+        "android_client_info": {
+          "package_name": "com.rajput2812.chatdemo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "531442407283-fmbmhp2ul3vecli7p636hnlo2tl7b3i7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCKo8qiZGObjFG7cP92wPOuwsCk5pvFaSQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "531442407283-fmbmhp2ul3vecli7p636hnlo2tl7b3i7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
