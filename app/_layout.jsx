@@ -3,6 +3,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Stack, useRouter } from "expo-router";
 import { ChatWrapper } from "../components/chatWrapper";
+import { WhatsAppStatusBar } from "../components/WhatsAppStatusBar";
 import { AuthProvider } from "@/context/authContext";
 import { AppProvider } from "@/context/appContext";
 import { useEffect } from "react";
@@ -45,6 +46,7 @@ export default function Layout() {
   }
   return (
     <SafeAreaProvider>
+      <WhatsAppStatusBar />
       <GestureHandlerRootView style={styles.container}>
         <AuthProvider>
           <AppProvider>

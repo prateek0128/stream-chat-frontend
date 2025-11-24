@@ -91,6 +91,7 @@ export const WhatsAppChannelList: React.FC<WhatsAppChannelListProps> = ({
         keyExtractor={(item, index) => item?.id || index.toString()}
         style={styles.list}
         showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
 
       <TouchableOpacity style={styles.fab} onPress={onNewChat}>
@@ -112,11 +113,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#E91E63",
     paddingHorizontal: 16,
     paddingVertical: 16,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   headerTitle: {
     color: "#fff",
     fontSize: 20,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.medium || fonts.semiBold,
   },
   headerActions: {
     flexDirection: "row",
@@ -133,8 +139,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#E5E5E5",
+    backgroundColor: '#FFFFFF',
+  },
+  separator: {
+    height: 0.5,
+    backgroundColor: '#E4E6EA',
+    marginLeft: 81,
   },
   avatar: {
     width: 50,
@@ -143,21 +153,21 @@ const styles = StyleSheet.create({
     backgroundColor: "#C2185B",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: 15,
     position: "relative",
   },
   avatarText: {
     color: "#fff",
-    fontSize: 20,
-    fontFamily: fonts.bold,
+    fontSize: 18,
+    fontFamily: fonts.medium || fonts.semiBold,
   },
   onlineIndicator: {
     position: "absolute",
-    bottom: 2,
-    right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    bottom: 0,
+    right: 0,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     backgroundColor: "#E91E63",
     borderWidth: 2,
     borderColor: "#fff",
@@ -173,13 +183,13 @@ const styles = StyleSheet.create({
   },
   channelName: {
     fontSize: 16,
-    fontFamily: fonts.semiBold,
-    color: "#000",
+    fontFamily: fonts.medium || fonts.semiBold,
+    color: "#111B21",
   },
   timestamp: {
     fontSize: 12,
     fontFamily: fonts.regular,
-    color: "#999",
+    color: "#8696A0",
   },
   channelFooter: {
     flexDirection: "row",
@@ -190,7 +200,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontFamily: fonts.regular,
-    color: "#666",
+    color: "#8696A0",
     marginRight: 8,
   },
   unreadBadge: {

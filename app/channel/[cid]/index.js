@@ -24,8 +24,11 @@ import { useAppContext } from "@/context/appContext";
 import { useChatContext } from "stream-chat-expo";
 import { Pressable } from "react-native";
 import { WhatsAppChatHeader } from "@/components/WhatsAppChatHeader";
+import { WhatsAppMessageInputUI } from "@/components/WhatsAppMessageInputUI";
+import { WhatsAppBackground } from "@/components/WhatsAppBackground";
 import { KeyboardCompatibleView } from "stream-chat-expo";
 import { fonts } from "@/config/fonts";
+import { whatsappChatTheme } from "@/config/whatsappChatTheme";
 
 export default function ChannelScreen() {
   const { cid } = useLocalSearchParams(); // e.g. "messaging:demo" or "messaging:xxxxx"
@@ -143,15 +146,15 @@ export default function ChannelScreen() {
         const handleCallAnswered = () => {
           callManager.joinCallWhenAnswered();
           router.replace({ pathname: `/call/${id}` });
-          callManager.removeListener('callAnswered', handleCallAnswered);
+          callManager.removeListener("callAnswered", handleCallAnswered);
         };
-        
-        callManager.on('callAnswered', handleCallAnswered);
-        
+
+        callManager.on("callAnswered", handleCallAnswered);
+
         await callManager.startCall(id, memberIds, true);
-        
+
         // Show outgoing call UI immediately
-        router.push({ pathname: `/call/${id}`, params: { status: 'calling' } });
+        router.push({ pathname: `/call/${id}`, params: { status: "calling" } });
       } else {
         throw new Error("Call manager not ready. Please try again.");
       }
@@ -182,16 +185,22 @@ export default function ChannelScreen() {
         // Listen for call answered event
         const handleCallAnswered = () => {
           callManager.joinCallWhenAnswered();
-          router.replace({ pathname: `/call/${id}`, params: { mode: "audio" } });
-          callManager.removeListener('callAnswered', handleCallAnswered);
+          router.replace({
+            pathname: `/call/${id}`,
+            params: { mode: "audio" },
+          });
+          callManager.removeListener("callAnswered", handleCallAnswered);
         };
-        
-        callManager.on('callAnswered', handleCallAnswered);
-        
+
+        callManager.on("callAnswered", handleCallAnswered);
+
         await callManager.startCall(id, memberIds, false);
-        
+
         // Show outgoing call UI immediately
-        router.push({ pathname: `/call/${id}`, params: { mode: "audio", status: 'calling' } });
+        router.push({
+          pathname: `/call/${id}`,
+          params: { mode: "audio", status: "calling" },
+        });
       } else {
         throw new Error("Call manager not ready. Please try again.");
       }
@@ -253,14 +262,6 @@ export default function ChannelScreen() {
     return otherMember?.user?.name || otherMember?.user?.id || "Chat";
   };
 
-  const QuickActionButton = ({ icon, label, color = "#075E54", onPress }) => (
-    <Pressable style={styles.quickAction} onPress={onPress}>
-      <View style={styles.quickActionIconWrapper}>
-        <Ionicons name={icon} size={20} color="#fff" />
-      </View>
-      <Text style={styles.quickActionLabel}>{label}</Text>
-    </Pressable>
-  );
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -271,35 +272,50 @@ export default function ChannelScreen() {
       />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior="padding"
-        keyboardVerticalOffset={0}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <Channel
-          channel={channel}
-          AttachmentPicker={() => null}
-          AttachmentPickerProvider={() => null}
-          AttachmentPickerBottomSheet={() => null}
-          FileAttachmentPicker={() => null}
-          ImageGallery={() => null}
-          ImageGalleryGrid={() => null}
-          BottomSheetHandle={() => null}
-          MessageInputFlatList={() => null}
-        >
-          <MessageList
-            onThreadSelect={(parentMessage) => {
-              router.push(`/channel/${cid}/thread/${parentMessage?.id}`);
-            }}
-          />
-          {/* 👇 Show this row ONLY when keyboard is open */}
-          <MessageInput
-            hasCommands={false}
-            hasFilePicker={false}
-            hasImagePicker={false}
-            hasCameraPicker={false}
-            audioRecordingEnabled={true}
-            showAttachmentPickerBottomSheet={false}
-          />
-        </Channel>
+        <WhatsAppBackground>
+          <Channel channel={channel} theme={whatsappChatTheme}>
+            <MessageList
+              onThreadSelect={(parentMessage) => {
+                router.push(`/channel/${cid}/thread/${parentMessage?.id}`);
+              }}
+            />
+            <MessageInput
+              hasCommands={false}
+              hasFilePicker={true}
+              hasImagePicker={true}
+              hasCameraPicker={true}
+              audioRecordingEnabled={true}
+              showAttachmentPickerBottomSheet={true}
+              Input={WhatsAppMessageInputUI}
+              // Input={WhatsAppInputWrapper}
+              inputContainerStyle={{
+                backgroundColor: "#000",
+                borderRadius: 999,
+                paddingHorizontal: 15,
+                paddingVertical: 8,
+                marginHorizontal: 10,
+                marginBottom: 0,
+                flexDirection: "row",
+                alignItems: "center",
+              }}
+              additionalTextInputProps={{
+                placeholder: "Message",
+                placeholderTextColor: "#8696A0",
+                style: {
+                  flex: 1,
+                  fontSize: 16,
+                  color: "#000",
+                  paddingVertical: 6,
+                  paddingLeft: 10,
+                  maxHeight: 120,
+                },
+                multiline: true,
+              }}
+            />
+          </Channel>
+        </WhatsAppBackground>
       </KeyboardAvoidingView>
       <SafeAreaView style={styles.bottomSafeArea} edges={["bottom"]} />
     </SafeAreaView>
@@ -308,14 +324,14 @@ export default function ChannelScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E5DDD5", // WhatsApp chat background
+    backgroundColor: "#E91E63",
   },
   bottomSafeArea: {
-    backgroundColor: "#E91E63", // Same as header color
+    backgroundColor: "#F0F2F5",
   },
   chatContainer: {
     flex: 1,
-    backgroundColor: "#E5DDD5",
+    backgroundColor: "#EFEAE2",
   },
   messageContainer: {
     marginVertical: 2,
@@ -339,36 +355,36 @@ const styles = StyleSheet.create({
     shadowRadius: 1,
   },
   myBubble: {
-    backgroundColor: "#DCF8C6",
-    borderBottomRightRadius: 4,
+    backgroundColor: "#FCE4EC",
+    borderBottomRightRadius: 2,
   },
   otherBubble: {
-    backgroundColor: "#fff",
-    borderBottomLeftRadius: 4,
+    backgroundColor: "#FFFFFF",
+    borderBottomLeftRadius: 2,
   },
   messageText: {
-    fontSize: 16,
-    lineHeight: 20,
-    color: "#000",
+    fontSize: 14.5,
+    lineHeight: 19,
+    color: "#111B21",
     fontFamily: fonts.regular,
   },
   myText: {
-    color: "#000",
+    color: "#111B21",
   },
   otherText: {
-    color: "#000",
+    color: "#111B21",
   },
   timestamp: {
-    fontSize: 12,
-    marginTop: 4,
+    fontSize: 11,
+    marginTop: 2,
     alignSelf: "flex-end",
     fontFamily: fonts.regular,
   },
   myTimestamp: {
-    color: "#666",
+    color: "#667781",
   },
   otherTimestamp: {
-    color: "#999",
+    color: "#667781",
   },
   quickActionsRow: {
     flexDirection: "row",
@@ -388,7 +404,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#075E54", // WhatsApp-ish green
+    backgroundColor: "#E91E63",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 2,
