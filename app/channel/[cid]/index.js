@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
@@ -29,18 +29,20 @@ import { WhatsAppBackground } from "@/components/WhatsAppBackground";
 import { KeyboardCompatibleView } from "stream-chat-expo";
 import { fonts } from "@/config/fonts";
 import { whatsappChatTheme } from "@/config/whatsappChatTheme";
+import { useTheme } from "@/context/ThemeContext";
 
 export default function ChannelScreen() {
   const { cid } = useLocalSearchParams(); // e.g. "messaging:demo" or "messaging:xxxxx"
   const headerHeight = useHeaderHeight();
   const router = useRouter();
   const { chatClient, callManager } = useAppContext();
+  const { colors } = useTheme();
 
   const [channel, setChannel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-
+  const inputRef = useRef(null);
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", () =>
       setKeyboardVisible(true)
@@ -209,48 +211,6 @@ export default function ChannelScreen() {
       alert("Failed to start audio call. Please try again.");
     }
   };
-
-  // Custom message component with WhatsApp styling
-  const CustomMessage = (props) => {
-    const { message, isMyMessage } = props;
-
-    return (
-      <View
-        style={[
-          styles.messageContainer,
-          isMyMessage ? styles.myMessage : styles.otherMessage,
-        ]}
-      >
-        <View
-          style={[
-            styles.messageBubble,
-            isMyMessage ? styles.myBubble : styles.otherBubble,
-          ]}
-        >
-          <Text
-            style={[
-              styles.messageText,
-              isMyMessage ? styles.myText : styles.otherText,
-            ]}
-          >
-            {message.text}
-          </Text>
-          <Text
-            style={[
-              styles.timestamp,
-              isMyMessage ? styles.myTimestamp : styles.otherTimestamp,
-            ]}
-          >
-            {new Date(message.created_at).toLocaleTimeString("en-US", {
-              hour: "numeric",
-              minute: "2-digit",
-              hour12: true,
-            })}
-          </Text>
-        </View>
-      </View>
-    );
-  };
   // Get the other person's name from channel members
   const getChannelDisplayName = () => {
     if (channel.data?.name) return channel.data.name;
@@ -263,59 +223,205 @@ export default function ChannelScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.primary }]} edges={["top"]}>
       <Stack.Screen options={{ headerShown: false }} />
       <WhatsAppChatHeader
         channelName={getChannelDisplayName()}
         onVideoCall={handleVideoCall}
         onAudioCall={handleAudioCall}
+        channel={channel}
       />
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={{ flex: 1, backgroundColor: colors.background }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <WhatsAppBackground>
-          <Channel channel={channel} theme={whatsappChatTheme}>
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <WhatsAppBackground key={colors.background}>
+          <Channel
+            theme={{
+              ...whatsappChatTheme,
+              messageList: {
+                ...whatsappChatTheme.messageList,
+                container: {
+                  ...whatsappChatTheme.messageList.container,
+                  backgroundColor: colors.background,
+                },
+              },
+            }}
+            channel={channel}
+            /* ---------------------------
+     🔥 MessageInput Core Features
+     --------------------------- */
+            audioRecordingEnabled={true}
+            hasImagePicker={true}
+            hasFilePicker={true}
+            hasCameraPicker={true}
+            showAttachmentPickerBottomSheet={true}
+            /* ---------------------------
+     🔥 Attachment Picker
+     --------------------------- */
+            attachmentPickerBottomSheetHeight={0.4} // 40% of screen height
+            attachmentSelectionBarHeight={52}
+            closeAttachmentPicker={() => {}} // Optional override
+            /* ---------------------------
+     🔥 Text Input Customization
+     --------------------------- */
+            additionalTextInputProps={{
+              placeholder: "Message",
+              placeholderTextColor: "#8696A0",
+              multiline: true,
+              style: {
+                fontSize: 16,
+                color: "#000",
+                fontFamily: fonts.regular,
+              },
+            }}
+            inputBoxRef={inputRef}
+            /* ---------------------------
+     🔥 Audio Recording Controls
+     --------------------------- */
+            asyncMessagesMinimumPressDuration={500} // long press before recording starts
+            asyncMessagesLockDistance={50} // slide-up to lock recording
+            asyncMessagesSlideToCancelDistance={100} // slide-left to cancel
+            AsyncMessagesMultiSendEnabled={true} // allow multiple voice snippets
+            asyncMessagesLockEnabled={true}
+            /* ---------------------------
+     🔥 Poll Creation
+     --------------------------- */
+            showPollCreationDialog={false} // true if using polls
+            closePollCreationDialog={() => {}}
+            /* ---------------------------
+     🔥 Channel State
+     --------------------------- */
+            isOnline={true}
+            threadList={false} // set true inside Thread component
+            watchers={{}}
+            members={{}}
+            cooldownEndsAt={null}
+            /* ---------------------------
+     🔥 Sending Message
+     --------------------------- */
+            // sendMessage={sendMessageFn}
+            /* ---------------------------
+     🔥 UI Overrides (EVERY slot enabled)
+     ----------------------------------- */
+
+            // // Attachment / File Previews
+            // AttachmentUploadPreviewList={AttachmentUploadPreviewList}
+            // AttachmentPickerSelectionBar={AttachmentPickerSelectionBar}
+            // // Audio recording UI
+            // AudioRecorder={AudioRecorder}
+            // AudioRecordingInProgress={AudioRecordingInProgress}
+            // AudioRecordingPreview={AudioRecordingPreview}
+            // AudioRecordingLockIndicator={AudioRecordingLockIndicator}
+            // AudioRecordingWaveform={AudioRecordingWaveform}
+            // // Input Areas
+            // Input={MessageInputUI} // your custom UI
+            // InputButtons={InputButtonsUI} // custom left+right icons
+            // InputEditingStateHeader={InputEditingStateHeader}
+            // InputReplyStateHeader={InputReplyStateHeader}
+            // // Reply Component
+            // Reply={ReplyPreview}
+            // // Dropdown UI / Suggestions
+            // AutoCompleteSuggestionList={AutoCompleteSuggestionList}
+            // // Send Button
+            // SendButton={SendButton}
+            // // Thread checkbox message
+            // ShowThreadMessageInChannelButton={ShowThreadMessageInChannelButton}
+            // // Audio Buttons
+            // StartAudioRecordingButton={StartAudioRecordingButton}
+            // // Streaming / AI Generation
+            // StopMessageStreamingButton={StopMessageStreamingButton}
+            // // Replace native TextInput
+            // TextInputComponent={TextInput}
+            // // Commands UI
+            // CommandInput={CommandInput}
+            // // Poll UI
+            // CreatePollContent={CreatePollContent}
+            // // Cooldown
+            // CooldownTimer={CooldownTimer}
+          >
             <MessageList
               onThreadSelect={(parentMessage) => {
                 router.push(`/channel/${cid}/thread/${parentMessage?.id}`);
               }}
             />
             <MessageInput
-              hasCommands={false}
+              /* ------------------------------------
+     🔥 Core Feature Toggles
+     ------------------------------------ */
+              hasCommands={true}
               hasFilePicker={true}
               hasImagePicker={true}
               hasCameraPicker={true}
               audioRecordingEnabled={true}
-              showAttachmentPickerBottomSheet={true}
-              Input={WhatsAppMessageInputUI}
-              // Input={WhatsAppInputWrapper}
-              inputContainerStyle={{
-                backgroundColor: "#000",
-                borderRadius: 999,
-                paddingHorizontal: 15,
-                paddingVertical: 8,
-                marginHorizontal: 10,
-                marginBottom: 0,
-                flexDirection: "row",
-                alignItems: "center",
-              }}
+              showAttachmentPickerBottomSheet={false}
+              /* ------------------------------------
+     🔥 TextInput Config
+     ------------------------------------ */
               additionalTextInputProps={{
-                placeholder: "Message",
-                placeholderTextColor: "#8696A0",
                 style: {
-                  flex: 1,
                   fontSize: 16,
                   color: "#000",
-                  paddingVertical: 6,
-                  paddingLeft: 10,
-                  maxHeight: 120,
+                  fontFamily: fonts.regular,
                 },
+                width: "100%",
+                placeholder: "Message",
+                placeholderTextColor: "#777",
+                fontFamily: fonts.regular,
                 multiline: true,
+                padding: 12,
               }}
+              /* ------------------------------------
+     🔥 FULL CUSTOM INPUT UI
+     ------------------------------------ */
+              // Input={CustomInputUI}
+              //Input={WhatsAppMessageInputUI}
+              /* ------------------------------------
+     🔥 UI OVERRIDE SLOTS — ALL ENABLED
+     ------------------------------------ */
+
+              // Upload preview inside input bar
+              // AttachmentUploadPreviewList={CustomAttachmentPreviewList}
+              // // Sliding attachment picker icons (image, file, camera)
+              // AttachmentPickerSelectionBar={CustomAttachmentPickerSelectionBar}
+              // /* --- Audio Recording UI --- */
+              // AudioRecorder={CustomAudioRecorder}
+              // AudioRecordingInProgress={CustomAudioRecordingInProgress}
+              // AudioRecordingLockIndicator={CustomAudioRecordingLockIndicator}
+              // AudioRecordingPreview={CustomAudioRecordingPreview}
+              // AudioRecordingWaveform={CustomAudioRecordingWaveform}
+              // /* --- Suggestions dropdown (commands, mentions, emojis) --- */
+              // AutoCompleteSuggestionList={CustomAutoCompleteSuggestionList}
+              // /* --- Input State Headers (reply, edit) --- */
+              // InputEditingStateHeader={CustomInputEditingStateHeader}
+              // InputReplyStateHeader={CustomInputReplyStateHeader}
+              // /* --- Reply Preview inside input --- */
+              // Reply={CustomReplyPreview}
+              // /* --- Left & Right Buttons --- */
+              // InputButtons={CustomInputButtons}
+              // /* --- Send Button --- */
+              // SendButton={CustomSendButton} // WhatsApp green send button here
+              // /* --- Thread checkbox button --- */
+              // ShowThreadMessageInChannelButton={
+              //   CustomShowThreadMessageInChannelButton
+              // }
+              // /* --- Audio Recording Icon --- */
+              // StartAudioRecordingButton={CustomStartAudioRecordingButton}
+              // /* --- AI Streaming UI --- */
+              // StopMessageStreamingButton={CustomStopMessageStreamingButton}
+              // /* --- Replace native input (use for emoji integration) --- */
+              // TextInputComponent={CustomTextInputComponent}
+              // /* --- Commands UI --- */
+              // CommandInput={CustomCommandInput}
+              // /* --- Poll creation UI --- */
+              // CreatePollContent={CustomCreatePollContent}
+              // /* --- Cooldown timer (for slow-mode channels) --- */
+              // CooldownTimer={CustomCooldownTimer}
             />
           </Channel>
         </WhatsAppBackground>
+        </View>
       </KeyboardAvoidingView>
       <SafeAreaView style={styles.bottomSafeArea} edges={["bottom"]} />
     </SafeAreaView>
@@ -324,7 +430,6 @@ export default function ChannelScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E91E63",
   },
   bottomSafeArea: {
     backgroundColor: "#F0F2F5",

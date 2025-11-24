@@ -1,15 +1,16 @@
 import React from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
 export const WhatsAppBackground: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { colors } = useTheme();
+  
+  console.log('Background color:', colors.background);
+  
   return (
-    <View style={styles.container}>
-      <View style={styles.background}>
-        {/* WhatsApp-like subtle pattern */}
-        <View style={styles.pattern} />
-      </View>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {children}
     </View>
   );
@@ -18,7 +19,6 @@ export const WhatsAppBackground: React.FC<{ children: React.ReactNode }> = ({ ch
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3E5F5',
   },
   background: {
     position: 'absolute',
@@ -26,11 +26,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#F3E5F5',
   },
   pattern: {
     flex: 1,
-    backgroundColor: '#F3E5F5',
-    opacity: 0.1,
+    opacity: 0.05,
   },
 });

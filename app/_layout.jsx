@@ -6,6 +6,7 @@ import { ChatWrapper } from "../components/chatWrapper";
 import { WhatsAppStatusBar } from "../components/WhatsAppStatusBar";
 import { AuthProvider } from "@/context/authContext";
 import { AppProvider } from "@/context/appContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 import { useEffect } from "react";
 import { setupNotificationListeners, setupNotifications } from "../lib/push";
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
@@ -48,13 +49,15 @@ export default function Layout() {
     <SafeAreaProvider>
       <WhatsAppStatusBar />
       <GestureHandlerRootView style={styles.container}>
-        <AuthProvider>
-          <AppProvider>
-            <ChatWrapper>
-              <Stack screenOptions={{ headerShown: false }} />
-            </ChatWrapper>
-          </AppProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <AppProvider>
+              <ChatWrapper>
+                <Stack screenOptions={{ headerShown: false }} />
+              </ChatWrapper>
+            </AppProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </GestureHandlerRootView>
     </SafeAreaProvider>
   );
