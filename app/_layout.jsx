@@ -31,13 +31,13 @@ export default function Layout() {
   useEffect(() => {
     if (!fontsLoaded) return;
     
-    // Delay notification setup to avoid initial navigation conflicts
-    const timer = setTimeout(() => {
-      setupNotifications(router);
-      setupNotificationListeners(router);
-    }, 2000);
+    // Temporarily disabled to debug navigation issue
+    // const timer = setTimeout(() => {
+    //   setupNotifications(router);
+    //   setupNotificationListeners(router);
+    // }, 5000);
     
-    return () => clearTimeout(timer);
+    // return () => clearTimeout(timer);
   }, [router, fontsLoaded]);
   
   if (!fontsLoaded) {

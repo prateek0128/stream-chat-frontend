@@ -6,4 +6,4 @@ export const chatUserToken =
 
 // 👉 CHANGE THIS: use your PC's LAN IP or ngrok https URL
 // Example: Metro shows "Metro waiting on exp://192.168.1.23:8081" → use that IP
-export const BASE_URL = "https://8bd724735b02.ngrok-free.app";
+export const BASE_URL = "https://1b8de8268e1b.ngrok-free.app";

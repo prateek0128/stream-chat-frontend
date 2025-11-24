@@ -65,14 +65,33 @@ export const AppProvider = ({ children }) => {
 
         await client.connectUser(user, token);
 
-        // 🔔 Push notifications: handler + routing
-        await setupNotifications(router);
+        // Push notifications setup is handled in _layout.jsx
         // 🔐 Register this device’s Expo push token on your backend
         await registerExpoToken(BASE_URL, user.id);
 
         if (!cancelled) {
           setChatClient(client);
           setError(null);
+          
+          // Initialize call manager after chat client is ready
+          try {
+            await callManager.initialize(user.id, user.name);
+            
+            // Listen for incoming calls
+            callManager.on('incomingCall', (call) => {
+              setIncomingCall(call);
+            });
+            
+            callManager.on('callEnded', () => {
+              setIncomingCall(null);
+            });
+            
+            callManager.on('callAccepted', () => {
+              setIncomingCall(null);
+            });
+          } catch (callError) {
+            console.warn('Failed to initialize call manager:', callError);
+          }
         }
       } catch (e) {
         if (!cancelled) {
@@ -134,6 +153,7 @@ export const AppProvider = ({ children }) => {
     if (incomingCall) {
       try {
         await callManager.acceptCall(incomingCall.callId);
+        setIncomingCall(null);
       } catch (error) {
         console.error("Failed to accept call:", error);
         setIncomingCall(null);

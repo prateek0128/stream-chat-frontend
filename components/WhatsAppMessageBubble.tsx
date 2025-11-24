@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Text as IconText } from 'react-native';
+import { copyToClipboard, shareMessage, hapticFeedback } from '../utils/chatUtils';
 
 interface WhatsAppMessageBubbleProps {
   message: string;
@@ -15,9 +16,37 @@ export const WhatsAppMessageBubble: React.FC<WhatsAppMessageBubbleProps> = ({
   isOwn,
   isRead = false,
 }) => {
+  const handleLongPress = () => {
+    hapticFeedback.medium();
+    Alert.alert(
+      'Message Options',
+      'What would you like to do with this message?',
+      [
+        { text: 'Copy', onPress: () => handleCopy() },
+        { text: 'Share', onPress: () => handleShare() },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const handleCopy = async () => {
+    const success = await copyToClipboard(message);
+    if (success) {
+      Alert.alert('Copied', 'Message copied to clipboard');
+    }
+  };
+
+  const handleShare = () => {
+    shareMessage(message);
+  };
+
   return (
     <View style={[styles.container, isOwn ? styles.ownMessage : styles.otherMessage]}>
-      <View style={[styles.bubble, isOwn ? styles.ownBubble : styles.otherBubble]}>
+      <TouchableOpacity 
+        style={[styles.bubble, isOwn ? styles.ownBubble : styles.otherBubble]}
+        onLongPress={handleLongPress}
+        activeOpacity={0.8}
+      >
         <Text style={[styles.messageText, isOwn ? styles.ownText : styles.otherText]}>
           {message}
         </Text>
@@ -31,7 +60,7 @@ export const WhatsAppMessageBubble: React.FC<WhatsAppMessageBubbleProps> = ({
             </IconText>
           )}
         </View>
-      </View>
+      </TouchableOpacity>
     </View>
   );
 };

@@ -31,11 +31,21 @@ export async function setupNotifications(router: Router) {
   });
 
   if (Platform.OS === "android") {
+    // 🔔 Messages channel
     await Notifications.setNotificationChannelAsync("chat", {
-      name: "Chat",
-      importance: Notifications.AndroidImportance.HIGH,
+      name: "Chat messages",
+      importance: Notifications.AndroidImportance.DEFAULT,
       sound: "default",
-      vibrationPattern: [0, 250, 250, 250],
+      vibrationPattern: [0, 200, 200, 200],
+    });
+
+    // 📞 Calls channel – louder + more attention
+    await Notifications.setNotificationChannelAsync("calls", {
+      name: "Calls",
+      importance: Notifications.AndroidImportance.MAX,
+      sound: "default", // uses system default ringtone-ish sound
+      vibrationPattern: [0, 500, 500, 500],
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility?.PUBLIC,
     });
   }
 
@@ -43,12 +53,18 @@ export async function setupNotifications(router: Router) {
   // Delay this to avoid navigation conflicts during app initialization
   setTimeout(async () => {
     try {
-      const lastResponse = await Notifications.getLastNotificationResponseAsync();
+      const lastResponse =
+        await Notifications.getLastNotificationResponseAsync();
       if (lastResponse?.notification) {
         const data: any = lastResponse.notification.request.content.data;
         console.log("🔁 Last notification response data:", data);
         // Only handle routing if we have valid notification data
-        if (data && (data.type === 'chat' || data.type === 'call')) {
+        if (
+          data &&
+          (data.type === "chat" || data.type === "call") &&
+          router &&
+          typeof router.push === "function"
+        ) {
           handleNotificationRouting(data, router);
         }
       }
@@ -62,7 +78,9 @@ export async function setupNotifications(router: Router) {
     Notifications.addNotificationResponseReceivedListener((response: any) => {
       const data: any = response.notification.request.content.data;
       console.log("📲 Notification tap data:", data);
-      handleNotificationRouting(data, router);
+      if (router && typeof router.push === "function") {
+        handleNotificationRouting(data, router);
+      }
     });
     listenersRegistered = true;
   }
@@ -70,8 +88,8 @@ export async function setupNotifications(router: Router) {
 
 // Decide where to navigate based on the push payload
 function handleNotificationRouting(data: any, router: Router) {
-  if (!data || !router || typeof router.push !== 'function') {
-    console.log('Navigation skipped: invalid data or router');
+  if (!data || !router || typeof router.push !== "function") {
+    console.log("Navigation skipped: invalid data or router");
     return;
   }
 
@@ -80,21 +98,37 @@ function handleNotificationRouting(data: any, router: Router) {
     try {
       // From /stream/webhook (chat messages)
       if (data.type === "chat" && data.cid) {
-        console.log('Navigating to channel:', data.cid);
+        console.log("Navigating to channel:", data.cid);
         router.push(`/channel/${data.cid}`);
         return;
       }
 
       // From /stream/video-webhook (incoming calls)
       if (data.type === "call" && data.callId) {
-        console.log('Navigating to call:', data.callId);
+        console.log("Navigating to call:", data.callId);
         router.push(`/call/${data.callId}`);
         return;
       }
-      
-      console.log('No valid navigation data found:', data);
+
+      // If no specific route, navigate to home instead of causing error
+      if (data.type && !data.cid && !data.callId) {
+        console.log(
+          "Navigating to home due to incomplete notification data:",
+          data
+        );
+        router.push("/");
+        return;
+      }
+
+      console.log("No valid navigation data found:", data);
     } catch (error) {
       console.warn("Navigation error in handleNotificationRouting:", error);
+      // Fallback to home route if navigation fails
+      try {
+        router.push("/");
+      } catch (fallbackError) {
+        console.warn("Fallback navigation also failed:", fallbackError);
+      }
     }
   }, 1000);
 }

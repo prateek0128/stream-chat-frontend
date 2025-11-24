@@ -1,30 +1,83 @@
-import React, { useState } from "react";
-import { View, TextInput, TouchableOpacity, StyleSheet, Modal } from "react-native";
+import React, { useState, useRef } from "react";
+import { View, TextInput, TouchableOpacity, StyleSheet, Modal, Alert } from "react-native";
 import { Text as IconText } from "react-native";
 import EmojiSelector from "react-native-emoji-selector";
 import { fonts } from "../config/fonts";
+import { AudioRecorderButton } from './AudioRecorderButton';
+import { pasteFromClipboard, hapticFeedback, showImagePickerOptions } from '../utils/chatUtils';
 
 interface WhatsAppMessageInputProps {
   onSendMessage: (message: string) => void;
+  onAudioMessage?: (uri: string) => void;
+  onImageMessage?: (imageUri: string) => void;
 }
 
 export const WhatsAppMessageInput: React.FC<WhatsAppMessageInputProps> = ({
   onSendMessage,
+  onAudioMessage,
+  onImageMessage,
 }) => {
   const [message, setMessage] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   const handleSend = () => {
     if (message.trim()) {
+      hapticFeedback.light();
       onSendMessage(message.trim());
       setMessage("");
     }
   };
 
+  const handlePaste = async () => {
+    const clipboardText = await pasteFromClipboard();
+    if (clipboardText) {
+      setMessage(prev => prev + clipboardText);
+      hapticFeedback.selection();
+    }
+  };
+
+  const handleImagePicker = async () => {
+    const image = await showImagePickerOptions();
+    if (image && onImageMessage) {
+      onImageMessage(image.uri);
+    }
+  };
+
+  const handleAudioRecorded = (uri: string) => {
+    if (onAudioMessage) {
+      onAudioMessage(uri);
+    }
+  };
+
+  const [isRecording, setIsRecording] = useState(false);
+  const audioRecorder = useRef(new (require('../utils/chatUtils').AudioRecorder)()).current;
+
+  const startRecording = async () => {
+    setIsRecording(true);
+    await audioRecorder.startRecording();
+  };
+
+  const stopRecording = async () => {
+    const uri = await audioRecorder.stopRecording();
+    setIsRecording(false);
+    if (uri) handleAudioRecorded(uri);
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.inputContainer}>
-        <TouchableOpacity style={styles.attachButton}>
+        <TouchableOpacity 
+          style={styles.attachButton}
+          onPress={handleImagePicker}
+          onLongPress={() => {
+            hapticFeedback.medium();
+            Alert.alert('Options', 'Choose an action', [
+              { text: 'Select Image', onPress: handleImagePicker },
+              { text: 'Paste Text', onPress: handlePaste },
+              { text: 'Cancel', style: 'cancel' }
+            ]);
+          }}
+        >
           <IconText style={styles.iconText}>📎</IconText>
         </TouchableOpacity>
 
@@ -40,7 +93,10 @@ export const WhatsAppMessageInput: React.FC<WhatsAppMessageInputProps> = ({
 
         <TouchableOpacity 
           style={styles.emojiButton}
-          onPress={() => setShowEmojiPicker(true)}
+          onPress={() => {
+            hapticFeedback.selection();
+            setShowEmojiPicker(true);
+          }}
         >
           <IconText style={styles.iconText}>😊</IconText>
         </TouchableOpacity>
@@ -52,6 +108,8 @@ export const WhatsAppMessageInput: React.FC<WhatsAppMessageInputProps> = ({
           { backgroundColor: message.trim() ? "#E91E63" : "#54656F" },
         ]}
         onPress={handleSend}
+        onPressIn={!message.trim() ? startRecording : undefined}
+        onPressOut={!message.trim() ? stopRecording : undefined}
         disabled={!message.trim()}
       >
         <IconText style={styles.sendIconText}>
@@ -161,4 +219,5 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
   },
+
 });

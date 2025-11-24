@@ -32,27 +32,40 @@ const WhatsAppCallControls = ({
   audioOnly,
   onEndCall,
   call,
+  callDuration,
 }: {
   audioOnly: boolean;
   onEndCall: () => void;
   call: Call;
+  callDuration?: number;
 }) => {
   const { useCallCallingState, useParticipants } = useCallStateHooks();
   const callingState = useCallCallingState();
   const participants = useParticipants();
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(audioOnly);
+  const [isSpeakerOn, setIsSpeakerOn] = useState(false);
+
+  // Initialize speaker state - always start with speaker off
+  useEffect(() => {
+    setIsSpeakerOn(false);
+  }, []);
 
   const toggleAudio = async () => {
     try {
-      if (isMuted) {
-        await call.microphone.enable();
-      } else {
+      const newMutedState = !isMuted;
+      
+      if (newMutedState) {
         await call.microphone.disable();
+        console.log('Microphone disabled');
+      } else {
+        await call.microphone.enable();
+        console.log('Microphone enabled');
       }
-      setIsMuted(!isMuted);
+      
+      setIsMuted(newMutedState);
     } catch (error) {
-      console.error('Error toggling audio:', error);
+      console.error("Error toggling audio:", error);
     }
   };
 
@@ -65,8 +78,14 @@ const WhatsAppCallControls = ({
       }
       setIsVideoOff(!isVideoOff);
     } catch (error) {
-      console.error('Error toggling video:', error);
+      console.error("Error toggling video:", error);
     }
+  };
+
+  const toggleSpeaker = () => {
+    const newSpeakerState = !isSpeakerOn;
+    setIsSpeakerOn(newSpeakerState);
+    console.log('Speaker toggled to:', newSpeakerState);
   };
 
   return (
@@ -75,27 +94,42 @@ const WhatsAppCallControls = ({
         <Text style={styles.callStatus}>
           {callingState === "ringing"
             ? "Calling..."
-            : callingState === "joined"
-            ? `Connected (${participants.length})`
-            : "Connecting..."}
+            : callingState === "joined" && participants.length >= 2
+            ? callDuration !== undefined
+              ? `${Math.floor(callDuration / 60)
+                  .toString()
+                  .padStart(2, "0")}:${(callDuration % 60)
+                  .toString()
+                  .padStart(2, "0")}`
+              : `Connected (${Math.min(participants.length, 2)})`
+            : "Calling..."}
         </Text>
       </View>
 
       <View style={styles.bottomControls}>
-        <TouchableOpacity 
-          style={[styles.controlButton, isMuted && styles.mutedButton]} 
+        <TouchableOpacity
+          style={[styles.controlButton, isMuted && styles.mutedButton]}
           onPress={toggleAudio}
         >
-          <Text style={styles.controlIcon}>{isMuted ? '🔇' : '🎤'}</Text>
+          <Text style={styles.controlIcon}>{isMuted ? "🔇" : "🎤"}</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.controlButton, !isSpeakerOn && styles.mutedButton]}
+          onPress={toggleSpeaker}
+        >
+          <Text style={styles.controlIcon}>{isSpeakerOn ? "🔊" : "🔇"}</Text>
+        </TouchableOpacity>
+
         {!audioOnly && (
-          <TouchableOpacity 
-            style={[styles.controlButton, isVideoOff && styles.mutedButton]} 
+          <TouchableOpacity
+            style={[styles.controlButton, isVideoOff && styles.mutedButton]}
             onPress={toggleVideo}
           >
-            <Text style={styles.controlIcon}>{isVideoOff ? '📹' : '📷'}</Text>
+            <Text style={styles.controlIcon}>{isVideoOff ? "📹" : "📷"}</Text>
           </TouchableOpacity>
         )}
+
         <TouchableOpacity style={styles.endCallButton} onPress={onEndCall}>
           <Text style={styles.endCallIcon}>📞</Text>
         </TouchableOpacity>
@@ -105,11 +139,13 @@ const WhatsAppCallControls = ({
 };
 
 export default function CallScreen() {
-  const { callId, mode } = useLocalSearchParams<{
+  const { callId, mode, status } = useLocalSearchParams<{
     callId: string;
     mode?: string;
+    status?: string;
   }>();
   const audioOnly = mode === "audio";
+  const isOutgoingCall = status === "calling";
   const { userId, userName } = useAuth();
   const router = useRouter();
 
@@ -129,6 +165,17 @@ export default function CallScreen() {
   const [callStartTime, setCallStartTime] = useState<number | null>(null);
   const [otherParticipantName, setOtherParticipantName] =
     useState<string>("Unknown");
+  const [isCallAnswered, setIsCallAnswered] = useState(!isOutgoingCall);
+  const [callDuration, setCallDuration] = useState(0);
+
+  // Format call duration to MM:SS
+  const formatCallDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
+  };
 
   const handleEndCall = async () => {
     try {
@@ -147,7 +194,7 @@ export default function CallScreen() {
       }
 
       if (call) {
-        await call.leave();
+        await call.endCall();
       }
       router.back();
     } catch (error) {
@@ -162,22 +209,44 @@ export default function CallScreen() {
     (async () => {
       try {
         if (!userId || !callId) {
-          console.log('Missing userId or callId:', { userId, callId });
+          console.log("Missing userId or callId:", { userId, callId });
           return;
         }
 
-        console.log('Setting up call:', { userId, callId, audioOnly });
+        console.log("Setting up call:", { userId, callId, audioOnly });
         setIsConnecting(true);
-        
+
         const vc = await getVideoClient(String(userId), userName);
-        console.log('Video client created successfully');
-        
+        console.log("Video client created successfully");
+
         const c = vc.call("default", String(callId));
-        console.log('Call instance created:', callId);
+        console.log("Call instance created:", callId);
 
         // Set up call event listeners
-        c.on("call.session_participant_joined", (event: any) => {
+        c.on("call.session_participant_joined", async (event: any) => {
           console.log("Participant joined:", event);
+
+          // If this is an outgoing call and someone else joined, answer the call
+          if (isOutgoingCall && event.participant?.user?.id !== userId) {
+            console.log("Other participant joined outgoing call - joining now");
+            try {
+              await c.join();
+              // Configure media after joining
+              if (audioOnly) {
+                await c.camera.disable();
+                // Start with microphone disabled
+              } else {
+                await c.camera.enable();
+                // Start with microphone disabled
+              }
+
+              setIsCallAnswered(true);
+              console.log("Successfully joined and configured media");
+            } catch (error) {
+              console.error("Failed to join call after answer:", error);
+            }
+          }
+
           if (!callStartTime) {
             setCallStartTime(Date.now());
           }
@@ -194,78 +263,72 @@ export default function CallScreen() {
           console.log("Participant left:", event);
         });
 
+        c.on("call.rejected", async (event: any) => {
+          console.log("Call rejected:", event);
+          // Only navigate back if this is an outgoing call that was rejected
+          if (mounted && isOutgoingCall) {
+            router.back();
+          }
+        });
+
         c.on("call.ended", async (event: any) => {
           console.log("Call ended:", event);
 
-          // Add call to history
+          // Only navigate back if call was actually answered or if it's not an outgoing call
+          const shouldNavigateBack = !isOutgoingCall || isCallAnswered;
+
+          // Add call to history only if call actually started
           if (callStartTime) {
             try {
               const duration = Math.floor((Date.now() - callStartTime) / 1000);
               await addCallToHistory({
                 callId: String(callId),
                 participantName: otherParticipantName,
-                participantId: "unknown", // You'd get this from the call participants
+                participantId: "unknown",
                 type: audioOnly ? "audio" : "video",
-                direction: "outgoing", // Assuming outgoing for now
+                direction: isOutgoingCall ? "outgoing" : "incoming",
                 timestamp: callStartTime,
                 duration,
               });
             } catch (historyError) {
-              console.warn('Failed to add call to history:', historyError);
+              console.warn("Failed to add call to history:", historyError);
             }
           }
 
-          if (mounted) {
+          if (mounted && shouldNavigateBack) {
             router.back();
           }
         });
 
-        // Join the call
-        console.log('Joining call...');
-        await c.join({
-          create: true,
-          data: {
-            members: [{ user_id: me.id }],
-            settings_override: {
-              audio: {
-                default_device: 'speaker',
-                mic_default_on: true,
-                speaker_default_on: true,
-              },
-              video: {
-                enabled: !audioOnly,
-                camera_default_on: !audioOnly,
-                target_resolution: {
-                  width: 640,
-                  height: 480,
-                },
-              },
-            },
-          },
-        });
-        console.log('Call joined successfully');
+        // Only join if it's not an outgoing call in "calling" status
+        if (!isOutgoingCall) {
+          console.log("Joining call...");
+          await c.join();
+          console.log("Call joined successfully");
 
-        // Configure media based on call type
-        try {
-          if (audioOnly) {
-            await c.camera.disable();
-            await c.microphone.enable();
-            console.log('Audio-only call configured');
-          } else {
-            await c.camera.enable();
-            await c.microphone.enable();
-            console.log('Video call configured');
+          // Configure media only after joining
+          try {
+            if (audioOnly) {
+              await c.camera.disable();
+              // Start with microphone disabled
+              console.log("Audio-only call configured");
+            } else {
+              await c.camera.enable();
+              // Start with microphone disabled
+              console.log("Video call configured");
+            }
+          } catch (mediaError) {
+            console.warn("Media configuration error:", mediaError);
           }
-        } catch (mediaError) {
-          console.warn('Media configuration error:', mediaError);
-          // Continue anyway
+        } else {
+          console.log("Outgoing call - waiting for answer before joining");
         }
 
         if (mounted) {
           setClient(vc);
           setCall(c);
           setIsConnecting(false);
-          console.log('Call setup completed successfully');
+          console.log("Call setup completed successfully");
         }
       } catch (e: any) {
         console.error("Call setup error:", e);
@@ -279,11 +342,27 @@ export default function CallScreen() {
     return () => {
       mounted = false;
       if (call) {
-        console.log('Cleaning up call...');
+        console.log("Cleaning up call...");
         call.leave().catch(console.error);
       }
     };
   }, [userId, callId, audioOnly, me.id, userName]);
+
+  // Timer effect for call duration
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    if (callStartTime && isCallAnswered) {
+      interval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+        setCallDuration(elapsed);
+      }, 1000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [callStartTime, isCallAnswered]);
 
   if (err) {
     return (
@@ -326,6 +405,27 @@ export default function CallScreen() {
     );
   }
 
+  // Show calling UI for outgoing calls that haven't been answered
+  if (isOutgoingCall && !isCallAnswered) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.loadingContent}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>👤</Text>
+          </View>
+          <Text style={styles.callingText}>
+            {audioOnly ? "Audio calling..." : "Video calling..."}
+          </Text>
+          <ActivityIndicator size="large" color="#fff" style={styles.loader} />
+          <TouchableOpacity style={styles.cancelButton} onPress={handleEndCall}>
+            <Text style={styles.cancelIcon}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -342,6 +442,7 @@ export default function CallScreen() {
                   audioOnly={true}
                   onEndCall={handleEndCall}
                   call={call}
+                  callDuration={callDuration}
                 />
               </View>
             </View>
@@ -352,6 +453,7 @@ export default function CallScreen() {
                 audioOnly={false}
                 onEndCall={handleEndCall}
                 call={call}
+                callDuration={callDuration}
               />
             </View>
           )}

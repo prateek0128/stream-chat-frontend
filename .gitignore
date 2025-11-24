@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Firebase Service Account (ignore this file)
+expoapp-54efa-firebase-adminsdk-fbsvc-d167d91f49.json

@@ -8,9 +8,12 @@ import {
   StyleSheet,
   Platform,
   KeyboardAvoidingView,
+  Keyboard,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import { useHeaderHeight } from "@react-navigation/elements";
+import { hapticFeedback, shareMessage } from "../../../utils/chatUtils";
 import {
   Channel,
   MessageList,
@@ -23,6 +26,7 @@ import { Pressable } from "react-native";
 import { WhatsAppChatHeader } from "@/components/WhatsAppChatHeader";
 import { KeyboardCompatibleView } from "stream-chat-expo";
 import { fonts } from "@/config/fonts";
+
 export default function ChannelScreen() {
   const { cid } = useLocalSearchParams(); // e.g. "messaging:demo" or "messaging:xxxxx"
   const headerHeight = useHeaderHeight();
@@ -32,7 +36,21 @@ export default function ChannelScreen() {
   const [channel, setChannel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", () =>
+      setKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener("keyboardDidHide", () =>
+      setKeyboardVisible(false)
+    );
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
   // create stable callId: 'call_dm_<A>_<B>'
   function callIdFromMembers(members) {
     const ids = members
@@ -77,7 +95,7 @@ export default function ChannelScreen() {
       <SafeAreaView
         style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
       >
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#E91E63" />
         <Text style={{ marginTop: 8 }}>Loading channel…</Text>
       </SafeAreaView>
     );
@@ -113,18 +131,30 @@ export default function ChannelScreen() {
         return;
       }
 
-      const id = uniqueCallIdFromMembers(members); // 👈 changed
+      const id = uniqueCallIdFromMembers(members);
       const memberIds = members
         .map((m) => m.user?.id || m.user_id)
         .filter(Boolean);
 
       console.log("Starting video call with ID:", id, "Members:", memberIds);
 
-      if (callManager) {
+      if (callManager && callManager.isInitialized()) {
+        // Listen for call answered event
+        const handleCallAnswered = () => {
+          callManager.joinCallWhenAnswered();
+          router.replace({ pathname: `/call/${id}` });
+          callManager.removeListener('callAnswered', handleCallAnswered);
+        };
+        
+        callManager.on('callAnswered', handleCallAnswered);
+        
         await callManager.startCall(id, memberIds, true);
+        
+        // Show outgoing call UI immediately
+        router.push({ pathname: `/call/${id}`, params: { status: 'calling' } });
+      } else {
+        throw new Error("Call manager not ready. Please try again.");
       }
-
-      router.push({ pathname: `/call/${id}` });
     } catch (error) {
       console.error("Error starting video call:", error);
       alert("Failed to start video call. Please try again.");
@@ -141,18 +171,30 @@ export default function ChannelScreen() {
         return;
       }
 
-      const id = uniqueCallIdFromMembers(members); // 👈 changed
+      const id = uniqueCallIdFromMembers(members);
       const memberIds = members
         .map((m) => m.user?.id || m.user_id)
         .filter(Boolean);
 
       console.log("Starting audio call with ID:", id, "Members:", memberIds);
 
-      if (callManager) {
+      if (callManager && callManager.isInitialized()) {
+        // Listen for call answered event
+        const handleCallAnswered = () => {
+          callManager.joinCallWhenAnswered();
+          router.replace({ pathname: `/call/${id}`, params: { mode: "audio" } });
+          callManager.removeListener('callAnswered', handleCallAnswered);
+        };
+        
+        callManager.on('callAnswered', handleCallAnswered);
+        
         await callManager.startCall(id, memberIds, false);
+        
+        // Show outgoing call UI immediately
+        router.push({ pathname: `/call/${id}`, params: { mode: "audio", status: 'calling' } });
+      } else {
+        throw new Error("Call manager not ready. Please try again.");
       }
-
-      router.push({ pathname: `/call/${id}`, params: { mode: "audio" } });
     } catch (error) {
       console.error("Error starting audio call:", error);
       alert("Failed to start audio call. Please try again.");
@@ -203,14 +245,24 @@ export default function ChannelScreen() {
   // Get the other person's name from channel members
   const getChannelDisplayName = () => {
     if (channel.data?.name) return channel.data.name;
-    
+
     const members = Object.values(channel.state?.members || {});
-    const otherMember = members.find(member => member.user?.id !== chatClient?.userID);
+    const otherMember = members.find(
+      (member) => member.user?.id !== chatClient?.userID
+    );
     return otherMember?.user?.name || otherMember?.user?.id || "Chat";
   };
 
+  const QuickActionButton = ({ icon, label, color = "#075E54", onPress }) => (
+    <Pressable style={styles.quickAction} onPress={onPress}>
+      <View style={styles.quickActionIconWrapper}>
+        <Ionicons name={icon} size={20} color="#fff" />
+      </View>
+      <Text style={styles.quickActionLabel}>{label}</Text>
+    </Pressable>
+  );
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <Stack.Screen options={{ headerShown: false }} />
       <WhatsAppChatHeader
         channelName={getChannelDisplayName()}
@@ -238,18 +290,18 @@ export default function ChannelScreen() {
               router.push(`/channel/${cid}/thread/${parentMessage?.id}`);
             }}
           />
-
+          {/* 👇 Show this row ONLY when keyboard is open */}
           <MessageInput
             hasCommands={false}
             hasFilePicker={false}
             hasImagePicker={false}
             hasCameraPicker={false}
-            audioRecordingEnabled={false}
+            audioRecordingEnabled={true}
             showAttachmentPickerBottomSheet={false}
           />
         </Channel>
       </KeyboardAvoidingView>
-      <SafeAreaView style={styles.bottomSafeArea} edges={['bottom']} />
+      <SafeAreaView style={styles.bottomSafeArea} edges={["bottom"]} />
     </SafeAreaView>
   );
 }
@@ -317,5 +369,32 @@ const styles = StyleSheet.create({
   },
   otherTimestamp: {
     color: "#999",
+  },
+  quickActionsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingTop: 6,
+    paddingBottom: 4,
+    backgroundColor: "#f5f5f5",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "#ddd",
+  },
+  quickAction: {
+    alignItems: "center",
+    flex: 1,
+  },
+  quickActionIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#075E54", // WhatsApp-ish green
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
+  },
+  quickActionLabel: {
+    fontSize: 11,
+    color: "#444",
   },
 });
