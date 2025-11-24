@@ -7,7 +7,9 @@ import { useAppContext } from "@/context/appContext";
 import { useAuth } from "@/context/authContext";
 import { BASE_URL } from "@/config/chatConfig";
 import { WhatsAppChannelList } from "@/components/WhatsAppChannelList";
+import { predefinedUsers, getUserById } from "@/config/users";
 import { fonts } from "@/config/fonts";
+import { UserSelectionModal } from "@/components/UserSelectionModal";
 
 const sort = { last_updated: -1 };
 const options = { state: true, watch: true };
@@ -16,6 +18,8 @@ export default function ChannelListScreen() {
   const router = useRouter();
   const { userId } = useAuth();
   const { setChannel, chatClient } = useAppContext();
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [activeChats, setActiveChats] = useState([]);
 
   if (!userId) {
     return (
@@ -37,9 +41,17 @@ export default function ChannelListScreen() {
     [userId]
   );
 
-  const createChat = async () => {
+  const createChat = async (otherUserId = null) => {
     const me = String(userId);
-    const other = me === "ronit63" ? "user_b" : "ronit63"; // simple toggle for demo
+    let other;
+    
+    if (otherUserId) {
+      other = otherUserId;
+    } else {
+      // Default behavior: find the first available user that's not the current user
+      const availableUsers = predefinedUsers.filter(user => user.id !== me);
+      other = availableUsers.length > 0 ? availableUsers[0].id : "user_b";
+    }
 
     const r = await fetch(`${BASE_URL}/stream/channel`, {
       method: "POST",
@@ -61,18 +73,31 @@ export default function ChannelListScreen() {
     router.push(`/channel/${cid}`);
   };
 
-  // Show only the other user based on current user
-  const otherUser = userId === "ronit63" ? "user_b" : "ronit63";
-  const mockChannels = [
-    {
-      id: `messaging:${otherUser}`,
-      name: String(otherUser || "User"),
-      lastMessage: "Tap to start chatting",
+  // Show active chats
+  const mockChannels = activeChats.map(chatUserId => {
+    const user = getUserById(chatUserId);
+    return {
+      id: `messaging:${user.id}`,
+      name: user.name,
+      lastMessage: "Tap to continue chatting",
       timestamp: "now",
       unreadCount: 0,
-      isOnline: true,
-    },
-  ];
+      isOnline: user.status === 'online',
+      avatar: user.avatar,
+    };
+  });
+
+  const handleUserSelect = async (selectedUserId) => {
+    setShowUserModal(false);
+    
+    // Add to active chats if not already there
+    if (!activeChats.includes(selectedUserId)) {
+      setActiveChats(prev => [...prev, selectedUserId]);
+    }
+    
+    // Create chat
+    await createChat(selectedUserId);
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -80,10 +105,18 @@ export default function ChannelListScreen() {
       <WhatsAppChannelList
         channels={mockChannels}
         onChannelSelect={(channelId) => {
-          // For demo, create a new channel or navigate to existing
-          createChat();
+          // Extract user ID from channel ID and create chat
+          const otherUserId = channelId.replace('messaging:', '');
+          createChat(otherUserId);
         }}
-        onNewChat={createChat}
+        onNewChat={() => setShowUserModal(true)}
+      />
+      
+      <UserSelectionModal
+        visible={showUserModal}
+        onClose={() => setShowUserModal(false)}
+        onUserSelect={handleUserSelect}
+        currentUserId={userId}
       />
       {/* Keep the original ChannelList hidden for functionality */}
       <View style={{ position: "absolute", opacity: 0, pointerEvents: "none" }}>

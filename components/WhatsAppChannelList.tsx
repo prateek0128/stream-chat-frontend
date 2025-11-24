@@ -7,6 +7,7 @@ import {
   FlatList,
   Modal,
   TextInput,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -20,6 +21,7 @@ interface ChatItem {
   timestamp: string;
   unreadCount?: number;
   isOnline?: boolean;
+  avatar?: string;
 }
 
 interface WhatsAppChannelListProps {
@@ -60,9 +62,16 @@ export const WhatsAppChannelList: React.FC<WhatsAppChannelListProps> = ({
         onPress={() => onChannelSelect(item.id)}
       >
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {safeName.charAt(0).toUpperCase()}
-          </Text>
+          {item.avatar && item.avatar.startsWith('http') ? (
+            <Image 
+              source={{ uri: item.avatar }} 
+              style={styles.avatarImage}
+            />
+          ) : (
+            <Text style={styles.avatarText}>
+              {item.avatar || safeName.charAt(0).toUpperCase()}
+            </Text>
+          )}
           {item.isOnline && <View style={styles.onlineIndicator} />}
         </View>
 
@@ -157,6 +166,17 @@ export const WhatsAppChannelList: React.FC<WhatsAppChannelListProps> = ({
           onPress={() => setShowMenu(false)}
         >
           <View style={styles.menuContainer}>
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={() => {
+                setShowMenu(false);
+                router.push('/users');
+              }}
+            >
+              <Ionicons name="people-circle-outline" size={20} color="#333" />
+              <Text style={styles.menuText}>All Users</Text>
+            </TouchableOpacity>
+            
             <TouchableOpacity 
               style={styles.menuItem} 
               onPress={() => {
@@ -267,6 +287,11 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 18,
     fontFamily: fonts.medium || fonts.semiBold,
+  },
+  avatarImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
   },
   onlineIndicator: {
     position: "absolute",
