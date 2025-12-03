@@ -7,14 +7,14 @@ import {
   Pressable,
   Alert,
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { UsersList } from '@/components/UsersList';
 import { predefinedUsers, getUserById } from '@/config/users';
 import { useAuth } from '@/context/authContext';
 import { fonts } from '@/config/fonts';
 
 export default function UsersScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const { userId: currentUserId, setAuth } = useAuth();
   const [selectedUserId, setSelectedUserId] = useState<string | undefined>(currentUserId || undefined);
 
@@ -36,7 +36,7 @@ export default function UsersScreen() {
             text: 'Switch',
             onPress: () => {
               setAuth(user.id, user.name);
-              router.push('/');
+              navigation.navigate('Home');
             }
           }
         ]
@@ -48,14 +48,6 @@ export default function UsersScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Stack.Screen 
-        options={{ 
-          title: 'Users',
-          headerStyle: { backgroundColor: '#E91E63' },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontFamily: fonts.semiBold },
-        }} 
-      />
       
       {currentUser && (
         <View style={styles.currentUserSection}>

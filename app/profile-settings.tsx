@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, Modal, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { fonts } from '../config/fonts';
 import { useAuth } from '../context/authContext';
 
 export default function ProfileSettings() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const { userName, userId } = useAuth();
   const [name, setName] = useState(userName || '');
   const [username, setUsername] = useState(userId || '');
@@ -70,7 +70,7 @@ export default function ProfileSettings() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile Settings</Text>
@@ -200,7 +200,7 @@ export default function ProfileSettings() {
             <Text style={styles.saveButtonText}>Save Changes</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
             <Ionicons name="close" size={20} color="#666" />
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>

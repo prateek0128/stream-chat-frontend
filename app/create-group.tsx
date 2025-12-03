@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { fonts } from '../config/fonts';
 
 const mockContacts = [
@@ -13,7 +13,7 @@ const mockContacts = [
 ];
 
 export default function CreateGroup() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const [groupName, setGroupName] = useState('');
   const [groupDescription, setGroupDescription] = useState('');
   const [contacts, setContacts] = useState(mockContacts);
@@ -39,7 +39,7 @@ export default function CreateGroup() {
       return;
     }
     Alert.alert('Success', 'Group created successfully!');
-    router.back();
+    navigation.goBack();
   };
 
   const renderContact = ({ item }: { item: any }) => (
@@ -63,7 +63,7 @@ export default function CreateGroup() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Create Group</Text>
@@ -142,7 +142,7 @@ export default function CreateGroup() {
             <Text style={styles.createButtonText}>Create Group</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
             <Ionicons name="close" size={20} color="#666" />
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { fonts } from "../config/fonts";
 import { ProfileModal } from "./ProfileModal";
 import { ThemeModal } from "./ThemeModal";
@@ -22,7 +22,7 @@ export const WhatsAppChatHeader: React.FC<WhatsAppChatHeaderProps> = ({
   onAudioCall,
   channel,
 }) => {
-  const router = useRouter();
+  const navigation = useNavigation();
   const { colors } = useTheme();
   const { logout } = useAuth();
   const [activeStatus, setActiveStatus] = useState("last seen recently");
@@ -101,7 +101,7 @@ export const WhatsAppChatHeader: React.FC<WhatsAppChatHeaderProps> = ({
 
   return (
     <View style={[styles.header, { backgroundColor: colors.primary }]}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
         <Ionicons name="arrow-back" size={24} color="#fff" />
       </TouchableOpacity>
 

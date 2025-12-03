@@ -11,21 +11,21 @@ import {
   FlatList,
   Image,
 } from "react-native";
-import { useRouter, Stack } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "@/context/authContext";
 import { fonts } from "@/config/fonts";
 import { predefinedUsers } from "@/config/users";
 
 export default function Login() {
   const { setAuth } = useAuth();
-  const router = useRouter();
+  const navigation = useNavigation();
   const [id, setId] = useState("");
   const [name, setName] = useState("");
 
   const onLogin = () => {
     if (!id.trim()) return;
     setAuth(id.trim(), name.trim() || id.trim());
-    router.push("/");
+    navigation.navigate("Home");
   };
 
   const selectUser = (user) => {
@@ -34,13 +34,11 @@ export default function Login() {
   };
 
   return (
-    <>
-      <Stack.Screen options={{ headerShown: false }} />
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 70}
-      >
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 70}
+    >
       <View style={styles.header}>
         <Text style={styles.title}>Smart Matrimony</Text>
         <Text style={styles.subtitle}>
@@ -107,8 +105,7 @@ export default function Login() {
           <Text style={styles.buttonText}>Start Chatting</Text>
         </Pressable>
       </View>
-      </KeyboardAvoidingView>
-    </>
+    </KeyboardAvoidingView>
   );
 }
 

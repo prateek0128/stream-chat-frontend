@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { View, ActivityIndicator, Text } from "react-native";
-import { useLocalSearchParams, Stack, useRouter } from "expo-router";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { Channel, Thread } from "stream-chat-expo";
 import { useAppContext } from "@/context/appContext";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { fonts } from "@/config/fonts";
 export default function ThreadScreen() {
-  const { cid, mid } = useLocalSearchParams(); // parent channel cid + parent message id
+  const route = useRoute();
+  const { cid, mid } = route.params; // parent channel cid + parent message id
   const { chatClient } = useAppContext();
-  const router = useRouter();
+  const navigation = useNavigation();
   const headerHeight = useHeaderHeight();
 
   const [channel, setChannel] = useState(null);
@@ -83,17 +84,6 @@ export default function ThreadScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <Stack.Screen options={{ 
-        title: "Thread",
-        headerTitleStyle: {
-          fontFamily: fonts.semiBold,
-          fontSize: 18,
-        },
-        headerStyle: {
-          backgroundColor: '#075E54',
-        },
-        headerTintColor: '#fff',
-      }} />
       <Channel
         channel={channel}
         thread={parent}
@@ -104,7 +94,7 @@ export default function ThreadScreen() {
           <Thread
             onThreadDismount={() => {
               // when Thread unmounts, go back to the channel
-              router.back();
+              navigation.goBack();
             }}
           />
         </View>

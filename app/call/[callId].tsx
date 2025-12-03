@@ -8,7 +8,7 @@ import {
   Dimensions,
   Alert,
 } from "react-native";
-import { useLocalSearchParams, Stack, useRouter } from "expo-router";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import { useAuth } from "../../context/authContext";
 import { getVideoClient } from "../../lib/videoClient";
 import {
@@ -139,15 +139,12 @@ const WhatsAppCallControls = ({
 };
 
 export default function CallScreen() {
-  const { callId, mode, status } = useLocalSearchParams<{
-    callId: string;
-    mode?: string;
-    status?: string;
-  }>();
+  const route = useRoute();
+  const { callId, mode, status } = route.params || {};
   const audioOnly = mode === "audio";
   const isOutgoingCall = status === "calling";
   const { userId, userName } = useAuth();
-  const router = useRouter();
+  const navigation = useNavigation();
 
   const me = useMemo(
     () => ({
@@ -196,10 +193,10 @@ export default function CallScreen() {
       if (call) {
         await call.endCall();
       }
-      router.back();
+      navigation.goBack();
     } catch (error) {
       console.error("Error ending call:", error);
-      router.back();
+      navigation.goBack();
     }
   };
 
@@ -267,7 +264,7 @@ export default function CallScreen() {
           console.log("Call rejected:", event);
           // Only navigate back if this is an outgoing call that was rejected
           if (mounted && isOutgoingCall) {
-            router.back();
+            navigation.goBack();
           }
         });
 
@@ -296,7 +293,7 @@ export default function CallScreen() {
           }
 
           if (mounted && shouldNavigateBack) {
-            router.back();
+            navigation.goBack();
           }
         });
 
@@ -367,13 +364,12 @@ export default function CallScreen() {
   if (err) {
     return (
       <SafeAreaView style={styles.errorContainer}>
-        <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.errorContent}>
           <Text style={styles.errorTitle}>Call Failed</Text>
           <Text style={styles.errorMessage}>{String(err.message || err)}</Text>
           <TouchableOpacity
             style={styles.retryButton}
-            onPress={() => router.back()}
+            onPress={() => navigation.goBack()}
           >
             <Text style={styles.retryButtonText}>Go Back</Text>
           </TouchableOpacity>
@@ -385,7 +381,6 @@ export default function CallScreen() {
   if (isConnecting || !client || !call) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.loadingContent}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>👤</Text>
@@ -396,7 +391,7 @@ export default function CallScreen() {
           <ActivityIndicator size="large" color="#fff" style={styles.loader} />
           <TouchableOpacity
             style={styles.cancelButton}
-            onPress={() => router.back()}
+            onPress={() => navigation.goBack()}
           >
             <Text style={styles.cancelIcon}>✕</Text>
           </TouchableOpacity>
@@ -409,7 +404,6 @@ export default function CallScreen() {
   if (isOutgoingCall && !isCallAnswered) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.loadingContent}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>👤</Text>
@@ -428,7 +422,6 @@ export default function CallScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Stack.Screen options={{ headerShown: false }} />
       <StreamVideo client={client}>
         <StreamCall call={call}>
           {audioOnly ? (

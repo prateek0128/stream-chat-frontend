@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { fonts } from '../config/fonts';
 
 const mockBlockedUsers = [
@@ -11,7 +11,7 @@ const mockBlockedUsers = [
 ];
 
 export default function BlockedAccounts() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const [blockedUsers, setBlockedUsers] = useState(mockBlockedUsers);
 
   const handleUnblock = (userId: string, userName: string) => {
@@ -55,7 +55,7 @@ export default function BlockedAccounts() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Blocked Accounts</Text>

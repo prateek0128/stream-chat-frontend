@@ -11,7 +11,7 @@ import {
   Keyboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, Stack, useRouter } from "expo-router";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { hapticFeedback, shareMessage } from "../../../utils/chatUtils";
 import {
@@ -32,9 +32,10 @@ import { whatsappChatTheme } from "@/config/whatsappChatTheme";
 import { useTheme } from "@/context/ThemeContext";
 
 export default function ChannelScreen() {
-  const { cid } = useLocalSearchParams(); // e.g. "messaging:demo" or "messaging:xxxxx"
+  const route = useRoute();
+  const { cid } = route.params; // e.g. "messaging:demo" or "messaging:xxxxx"
   const headerHeight = useHeaderHeight();
-  const router = useRouter();
+  const navigation = useNavigation();
   const { chatClient, callManager } = useAppContext();
   const { colors } = useTheme();
 
@@ -147,7 +148,7 @@ export default function ChannelScreen() {
         // Listen for call answered event
         const handleCallAnswered = () => {
           callManager.joinCallWhenAnswered();
-          router.replace({ pathname: `/call/${id}` });
+          navigation.replace("Call", { callId: id });
           callManager.removeListener("callAnswered", handleCallAnswered);
         };
 
@@ -156,7 +157,7 @@ export default function ChannelScreen() {
         await callManager.startCall(id, memberIds, true);
 
         // Show outgoing call UI immediately
-        router.push({ pathname: `/call/${id}`, params: { status: "calling" } });
+        navigation.navigate("Call", { callId: id, status: "calling" });
       } else {
         throw new Error("Call manager not ready. Please try again.");
       }
@@ -187,10 +188,7 @@ export default function ChannelScreen() {
         // Listen for call answered event
         const handleCallAnswered = () => {
           callManager.joinCallWhenAnswered();
-          router.replace({
-            pathname: `/call/${id}`,
-            params: { mode: "audio" },
-          });
+          navigation.replace("Call", { callId: id, mode: "audio" });
           callManager.removeListener("callAnswered", handleCallAnswered);
         };
 
@@ -199,10 +197,7 @@ export default function ChannelScreen() {
         await callManager.startCall(id, memberIds, false);
 
         // Show outgoing call UI immediately
-        router.push({
-          pathname: `/call/${id}`,
-          params: { mode: "audio", status: "calling" },
-        });
+        navigation.navigate("Call", { callId: id, mode: "audio", status: "calling" });
       } else {
         throw new Error("Call manager not ready. Please try again.");
       }
@@ -224,7 +219,6 @@ export default function ChannelScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.primary }]} edges={["top"]}>
-      <Stack.Screen options={{ headerShown: false }} />
       <WhatsAppChatHeader
         channelName={getChannelDisplayName()}
         onVideoCall={handleVideoCall}
@@ -343,7 +337,7 @@ export default function ChannelScreen() {
           >
             <MessageList
               onThreadSelect={(parentMessage) => {
-                router.push(`/channel/${cid}/thread/${parentMessage?.id}`);
+                navigation.navigate("Thread", { cid, mid: parentMessage?.id });
               }}
             />
             <MessageInput

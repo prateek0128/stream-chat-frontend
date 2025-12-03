@@ -10,7 +10,8 @@ import {
   Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
+import type { NavigationProp } from "@react-navigation/native";
 import { fonts } from "../config/fonts";
 import { useAuth } from "../context/authContext";
 
@@ -35,16 +36,17 @@ export const WhatsAppChannelList: React.FC<WhatsAppChannelListProps> = ({
   onChannelSelect,
   onNewChat,
 }) => {
-  const router = useRouter();
+  const navigation = useNavigation<NavigationProp<any>>();
   const { logout } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const filteredChannels = useMemo(() => {
     if (!searchQuery.trim()) return channels || [];
-    return (channels || []).filter(channel => 
-      channel?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      channel?.lastMessage?.toLowerCase().includes(searchQuery.toLowerCase())
+    return (channels || []).filter(
+      (channel) =>
+        channel?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        channel?.lastMessage?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [channels, searchQuery]);
 
@@ -62,11 +64,8 @@ export const WhatsAppChannelList: React.FC<WhatsAppChannelListProps> = ({
         onPress={() => onChannelSelect(item.id)}
       >
         <View style={styles.avatar}>
-          {item.avatar && item.avatar.startsWith('http') ? (
-            <Image 
-              source={{ uri: item.avatar }} 
-              style={styles.avatarImage}
-            />
+          {item.avatar && item.avatar.startsWith("http") ? (
+            <Image source={{ uri: item.avatar }} style={styles.avatarImage} />
           ) : (
             <Text style={styles.avatarText}>
               {item.avatar || safeName.charAt(0).toUpperCase()}
@@ -102,10 +101,16 @@ export const WhatsAppChannelList: React.FC<WhatsAppChannelListProps> = ({
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Chats</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.headerButton} onPress={() => setShowSearch(!showSearch)}>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => setShowSearch(!showSearch)}
+          >
             <Ionicons name="search" size={24} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerButton} onPress={() => setShowMenu(true)}>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => setShowMenu(true)}
+          >
             <Ionicons name="ellipsis-vertical" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -114,7 +119,12 @@ export const WhatsAppChannelList: React.FC<WhatsAppChannelListProps> = ({
       {showSearch && (
         <View style={styles.searchContainer}>
           <View style={styles.searchInputContainer}>
-            <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+            <Ionicons
+              name="search"
+              size={20}
+              color="#666"
+              style={styles.searchIcon}
+            />
             <TextInput
               style={styles.searchInput}
               placeholder="Search chats..."
@@ -124,7 +134,10 @@ export const WhatsAppChannelList: React.FC<WhatsAppChannelListProps> = ({
               autoFocus
             />
             {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+              <TouchableOpacity
+                onPress={() => setSearchQuery("")}
+                style={styles.clearButton}
+              >
                 <Ionicons name="close-circle" size={20} color="#999" />
               </TouchableOpacity>
             )}
@@ -139,87 +152,91 @@ export const WhatsAppChannelList: React.FC<WhatsAppChannelListProps> = ({
         style={styles.list}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
-        ListEmptyComponent={() => (
+        ListEmptyComponent={() =>
           searchQuery.trim() ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="search" size={48} color="#ccc" />
               <Text style={styles.emptyText}>No chats found</Text>
-              <Text style={styles.emptySubtext}>Try searching with different keywords</Text>
+              <Text style={styles.emptySubtext}>
+                Try searching with different keywords
+              </Text>
             </View>
           ) : null
-        )}
+        }
       />
 
       <TouchableOpacity style={styles.fab} onPress={onNewChat}>
         <Ionicons name="chatbubble" size={24} color="#fff" />
       </TouchableOpacity>
-      
+
       <Modal
         visible={showMenu}
         transparent
         animationType="fade"
         onRequestClose={() => setShowMenu(false)}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
           onPress={() => setShowMenu(false)}
         >
           <View style={styles.menuContainer}>
-            <TouchableOpacity 
-              style={styles.menuItem} 
+            <TouchableOpacity
+              style={styles.menuItem}
               onPress={() => {
                 setShowMenu(false);
-                router.push('/users');
+                navigation.navigate("Users");
               }}
             >
               <Ionicons name="people-circle-outline" size={20} color="#333" />
               <Text style={styles.menuText}>All Users</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.menuItem} 
+
+            <TouchableOpacity
+              style={styles.menuItem}
               onPress={() => {
                 setShowMenu(false);
-                router.push('/profile-settings');
+                navigation.navigate("ProfileSettings");
               }}
             >
               <Ionicons name="person-circle-outline" size={20} color="#333" />
               <Text style={styles.menuText}>Profile Settings</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.menuItem} 
+
+            <TouchableOpacity
+              style={styles.menuItem}
               onPress={() => {
                 setShowMenu(false);
-                router.push('/create-group');
+                navigation.navigate("CreateGroup");
               }}
             >
               <Ionicons name="people-outline" size={20} color="#333" />
               <Text style={styles.menuText}>Create Group</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.menuItem} 
+
+            <TouchableOpacity
+              style={styles.menuItem}
               onPress={() => {
                 setShowMenu(false);
-                router.push('/blocked-accounts');
+                navigation.navigate("BlockedAccounts");
               }}
             >
               <Ionicons name="ban-outline" size={20} color="#333" />
               <Text style={styles.menuText}>Blocked Accounts</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.menuItem} 
+
+            <TouchableOpacity
+              style={styles.menuItem}
               onPress={() => {
                 setShowMenu(false);
                 logout();
-                router.replace('/login');
+                navigation.navigate("Login");
               }}
             >
               <Ionicons name="log-out-outline" size={20} color="#d32f2f" />
-              <Text style={[styles.menuText, { color: '#d32f2f' }]}>Logout</Text>
+              <Text style={[styles.menuText, { color: "#d32f2f" }]}>
+                Logout
+              </Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -266,11 +283,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   separator: {
     height: 0.5,
-    backgroundColor: '#E4E6EA',
+    backgroundColor: "#E4E6EA",
     marginLeft: 81,
   },
   avatar: {
@@ -405,16 +422,16 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
   },
   searchContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E4E6EA',
+    borderBottomColor: "#E4E6EA",
   },
   searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8f9fa",
     borderRadius: 25,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -426,7 +443,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontFamily: fonts.regular,
-    color: '#1a1a1a',
+    color: "#1a1a1a",
     paddingVertical: 4,
   },
   clearButton: {
@@ -435,22 +452,22 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 60,
     paddingHorizontal: 40,
   },
   emptyText: {
     fontSize: 18,
     fontFamily: fonts.medium,
-    color: '#666',
+    color: "#666",
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
     fontFamily: fonts.regular,
-    color: '#999',
-    textAlign: 'center',
+    color: "#999",
+    textAlign: "center",
   },
 });

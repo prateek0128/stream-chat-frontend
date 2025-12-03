@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { StyleSheet, View, Pressable, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ChannelList } from "stream-chat-expo";
-import { Stack, useRouter } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { useAppContext } from "@/context/appContext";
 import { useAuth } from "@/context/authContext";
 import { BASE_URL } from "@/config/chatConfig";
@@ -15,7 +15,7 @@ const sort = { last_updated: -1 };
 const options = { state: true, watch: true };
 
 export default function ChannelListScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const { userId } = useAuth();
   const { setChannel, chatClient } = useAppContext();
   const [showUserModal, setShowUserModal] = useState(false);
@@ -29,7 +29,7 @@ export default function ChannelListScreen() {
         >
           Pick a user to start chatting
         </Text>
-        <Pressable style={styles.cta} onPress={() => router.push("/login")}>
+        <Pressable style={styles.cta} onPress={() => navigation.navigate("Login")}>
           <Text style={styles.ctaText}>Choose User</Text>
         </Pressable>
       </View>
@@ -70,7 +70,7 @@ export default function ChannelListScreen() {
     await ch.watch();
 
     setChannel(ch);
-    router.push(`/channel/${cid}`);
+    navigation.navigate("Channel", { cid });
   };
 
   // Show active chats
@@ -101,7 +101,6 @@ export default function ChannelListScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <Stack.Screen options={{ headerShown: false }} />
       <WhatsAppChannelList
         channels={mockChannels}
         onChannelSelect={(channelId) => {
@@ -126,7 +125,7 @@ export default function ChannelListScreen() {
           sort={sort}
           onSelect={(channel) => {
             setChannel?.(channel);
-            router.push(`/channel/${channel.cid}`);
+            navigation.navigate("Channel", { cid: channel.cid });
           }}
         />
       </View>

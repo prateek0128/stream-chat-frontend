@@ -4,13 +4,13 @@ import { Platform } from "react-native";
 
 const isExpoGo = Constants.appOwnership === "expo";
 
-export interface Router {
-  push: (path: string) => void;
+export interface Navigation {
+  navigate: (screen: string, params?: any) => void;
 }
 
 let listenersRegistered = false;
 
-export async function setupNotifications(router: Router) {
+export async function setupNotifications(navigation: Navigation) {
   if (isExpoGo) {
     console.warn(
       "Push setup is skipped in Expo Go. Use a Dev Build to test real push notifications."
@@ -62,10 +62,10 @@ export async function setupNotifications(router: Router) {
         if (
           data &&
           (data.type === "chat" || data.type === "call") &&
-          router &&
-          typeof router.push === "function"
+          navigation &&
+          typeof navigation.navigate === "function"
         ) {
-          handleNotificationRouting(data, router);
+          handleNotificationRouting(data, navigation);
         }
       }
     } catch (e) {
@@ -78,8 +78,8 @@ export async function setupNotifications(router: Router) {
     Notifications.addNotificationResponseReceivedListener((response: any) => {
       const data: any = response.notification.request.content.data;
       console.log("📲 Notification tap data:", data);
-      if (router && typeof router.push === "function") {
-        handleNotificationRouting(data, router);
+      if (navigation && typeof navigation.navigate === "function") {
+        handleNotificationRouting(data, navigation);
       }
     });
     listenersRegistered = true;
@@ -87,9 +87,9 @@ export async function setupNotifications(router: Router) {
 }
 
 // Decide where to navigate based on the push payload
-function handleNotificationRouting(data: any, router: Router) {
-  if (!data || !router || typeof router.push !== "function") {
-    console.log("Navigation skipped: invalid data or router");
+function handleNotificationRouting(data: any, navigation: Navigation) {
+  if (!data || !navigation || typeof navigation.navigate !== "function") {
+    console.log("Navigation skipped: invalid data or navigation");
     return;
   }
 
@@ -99,14 +99,14 @@ function handleNotificationRouting(data: any, router: Router) {
       // From /stream/webhook (chat messages)
       if (data.type === "chat" && data.cid) {
         console.log("Navigating to channel:", data.cid);
-        router.push(`/channel/${data.cid}`);
+        navigation.navigate("Channel", { cid: data.cid });
         return;
       }
 
       // From /stream/video-webhook (incoming calls)
       if (data.type === "call" && data.callId) {
         console.log("Navigating to call:", data.callId);
-        router.push(`/call/${data.callId}`);
+        navigation.navigate("Call", { callId: data.callId });
         return;
       }
 
@@ -116,7 +116,7 @@ function handleNotificationRouting(data: any, router: Router) {
           "Navigating to home due to incomplete notification data:",
           data
         );
-        router.push("/");
+        navigation.navigate("Home");
         return;
       }
 
@@ -125,7 +125,7 @@ function handleNotificationRouting(data: any, router: Router) {
       console.warn("Navigation error in handleNotificationRouting:", error);
       // Fallback to home route if navigation fails
       try {
-        router.push("/");
+        navigation.navigate("Home");
       } catch (fallbackError) {
         console.warn("Fallback navigation also failed:", fallbackError);
       }
@@ -176,9 +176,9 @@ export async function registerExpoToken(BASE_URL: string, userId: string) {
   return expoPushToken;
 }
 
-// You don’t actually need this anymore because setupNotifications already
+// You don't actually need this anymore because setupNotifications already
 // registers the listener, but keeping it if you want a manual-only version.
-export async function setupNotificationListeners(router?: Router) {
+export async function setupNotificationListeners(navigation?: Navigation) {
   if (isExpoGo) return;
 
   const Notifications: any = await import("expo-notifications");
@@ -188,10 +188,10 @@ export async function setupNotificationListeners(router?: Router) {
     console.log("📲 [legacy listener] Notification tap data:", data);
 
     if (data.type === "chat" && data.cid) {
-      router?.push(`/channel/${data.cid}`);
+      navigation?.navigate("Channel", { cid: data.cid });
     }
     if (data.type === "call" && data.callId) {
-      router?.push(`/call/${data.callId}`);
+      navigation?.navigate("Call", { callId: data.callId });
     }
   });
 }
