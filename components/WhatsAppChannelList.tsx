@@ -1,13 +1,18 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   FlatList,
+  Modal,
+  TextInput,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { fonts } from "../config/fonts";
+import { useAuth } from "../context/authContext";
 
 interface ChatItem {
   id: string;
@@ -16,6 +21,7 @@ interface ChatItem {
   timestamp: string;
   unreadCount?: number;
   isOnline?: boolean;
+  avatar?: string;
 }
 
 interface WhatsAppChannelListProps {
@@ -29,6 +35,19 @@ export const WhatsAppChannelList: React.FC<WhatsAppChannelListProps> = ({
   onChannelSelect,
   onNewChat,
 }) => {
+  const router = useRouter();
+  const { logout } = useAuth();
+  const [showMenu, setShowMenu] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const filteredChannels = useMemo(() => {
+    if (!searchQuery.trim()) return channels || [];
+    return (channels || []).filter(channel => 
+      channel?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      channel?.lastMessage?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [channels, searchQuery]);
+
   const renderChannelItem = ({ item }: { item: ChatItem }) => {
     console.log("CHANNEL ITEM:", item);
     if (!item) return null;
@@ -43,9 +62,16 @@ export const WhatsAppChannelList: React.FC<WhatsAppChannelListProps> = ({
         onPress={() => onChannelSelect(item.id)}
       >
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {safeName.charAt(0).toUpperCase()}
-          </Text>
+          {item.avatar && item.avatar.startsWith('http') ? (
+            <Image 
+              source={{ uri: item.avatar }} 
+              style={styles.avatarImage}
+            />
+          ) : (
+            <Text style={styles.avatarText}>
+              {item.avatar || safeName.charAt(0).toUpperCase()}
+            </Text>
+          )}
           {item.isOnline && <View style={styles.onlineIndicator} />}
         </View>
 
@@ -76,26 +102,128 @@ export const WhatsAppChannelList: React.FC<WhatsAppChannelListProps> = ({
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Chats</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.headerButton}>
+          <TouchableOpacity style={styles.headerButton} onPress={() => setShowSearch(!showSearch)}>
             <Ionicons name="search" size={24} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerButton}>
+          <TouchableOpacity style={styles.headerButton} onPress={() => setShowMenu(true)}>
             <Ionicons name="ellipsis-vertical" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
 
+      {showSearch && (
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputContainer}>
+            <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search chats..."
+              placeholderTextColor="#999"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoFocus
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+                <Ionicons name="close-circle" size={20} color="#999" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
+
       <FlatList
-        data={(channels || []).filter(Boolean)}
+        data={filteredChannels.filter(Boolean)}
         renderItem={renderChannelItem}
         keyExtractor={(item, index) => item?.id || index.toString()}
         style={styles.list}
         showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        ListEmptyComponent={() => (
+          searchQuery.trim() ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="search" size={48} color="#ccc" />
+              <Text style={styles.emptyText}>No chats found</Text>
+              <Text style={styles.emptySubtext}>Try searching with different keywords</Text>
+            </View>
+          ) : null
+        )}
       />
 
       <TouchableOpacity style={styles.fab} onPress={onNewChat}>
         <Ionicons name="chatbubble" size={24} color="#fff" />
       </TouchableOpacity>
+      
+      <Modal
+        visible={showMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowMenu(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowMenu(false)}
+        >
+          <View style={styles.menuContainer}>
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={() => {
+                setShowMenu(false);
+                router.push('/users');
+              }}
+            >
+              <Ionicons name="people-circle-outline" size={20} color="#333" />
+              <Text style={styles.menuText}>All Users</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={() => {
+                setShowMenu(false);
+                router.push('/profile-settings');
+              }}
+            >
+              <Ionicons name="person-circle-outline" size={20} color="#333" />
+              <Text style={styles.menuText}>Profile Settings</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={() => {
+                setShowMenu(false);
+                router.push('/create-group');
+              }}
+            >
+              <Ionicons name="people-outline" size={20} color="#333" />
+              <Text style={styles.menuText}>Create Group</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={() => {
+                setShowMenu(false);
+                router.push('/blocked-accounts');
+              }}
+            >
+              <Ionicons name="ban-outline" size={20} color="#333" />
+              <Text style={styles.menuText}>Blocked Accounts</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={() => {
+                setShowMenu(false);
+                logout();
+                router.replace('/login');
+              }}
+            >
+              <Ionicons name="log-out-outline" size={20} color="#d32f2f" />
+              <Text style={[styles.menuText, { color: '#d32f2f' }]}>Logout</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -112,11 +240,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#E91E63",
     paddingHorizontal: 16,
     paddingVertical: 16,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   headerTitle: {
     color: "#fff",
     fontSize: 20,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.medium || fonts.semiBold,
   },
   headerActions: {
     flexDirection: "row",
@@ -133,8 +266,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#E5E5E5",
+    backgroundColor: '#FFFFFF',
+  },
+  separator: {
+    height: 0.5,
+    backgroundColor: '#E4E6EA',
+    marginLeft: 81,
   },
   avatar: {
     width: 50,
@@ -143,21 +280,26 @@ const styles = StyleSheet.create({
     backgroundColor: "#C2185B",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: 15,
     position: "relative",
   },
   avatarText: {
     color: "#fff",
-    fontSize: 20,
-    fontFamily: fonts.bold,
+    fontSize: 18,
+    fontFamily: fonts.medium || fonts.semiBold,
+  },
+  avatarImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
   },
   onlineIndicator: {
     position: "absolute",
-    bottom: 2,
-    right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    bottom: 0,
+    right: 0,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     backgroundColor: "#E91E63",
     borderWidth: 2,
     borderColor: "#fff",
@@ -173,13 +315,13 @@ const styles = StyleSheet.create({
   },
   channelName: {
     fontSize: 16,
-    fontFamily: fonts.semiBold,
-    color: "#000",
+    fontFamily: fonts.medium || fonts.semiBold,
+    color: "#111B21",
   },
   timestamp: {
     fontSize: 12,
     fontFamily: fonts.regular,
-    color: "#999",
+    color: "#8696A0",
   },
   channelFooter: {
     flexDirection: "row",
@@ -190,7 +332,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontFamily: fonts.regular,
-    color: "#666",
+    color: "#8696A0",
     marginRight: 8,
   },
   unreadBadge: {
@@ -230,5 +372,85 @@ const styles = StyleSheet.create({
   fabIconText: {
     color: "#fff",
     fontSize: 24,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    justifyContent: "flex-start",
+    alignItems: "flex-end",
+    paddingTop: 60,
+    paddingRight: 16,
+  },
+  menuContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    paddingVertical: 8,
+    minWidth: 180,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  menuText: {
+    marginLeft: 12,
+    fontSize: 16,
+    color: "#333",
+    fontFamily: fonts.regular,
+  },
+  searchContainer: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E4E6EA',
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 25,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: fonts.regular,
+    color: '#1a1a1a',
+    paddingVertical: 4,
+  },
+  clearButton: {
+    marginLeft: 8,
+    padding: 4,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontFamily: fonts.medium,
+    color: '#666',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    fontFamily: fonts.regular,
+    color: '#999',
+    textAlign: 'center',
   },
 });

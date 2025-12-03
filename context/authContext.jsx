@@ -4,6 +4,7 @@ const AuthContext = createContext({
   userId: null,
   userName: null,
   setAuth: (_id, _name) => {},
+  logout: () => {},
 });
 
 export const AuthProvider = ({ children }) => {
@@ -17,8 +18,13 @@ export const AuthProvider = ({ children }) => {
     setUserName(String(name || _id));
   };
 
+  const logout = () => {
+    setUserId(null);
+    setUserName(null);
+  };
+
   return (
-    <AuthContext.Provider value={{ userId, userName, setAuth }}>
+    <AuthContext.Provider value={{ userId, userName, setAuth, logout }}>
       {children}
     </AuthContext.Provider>
   );
