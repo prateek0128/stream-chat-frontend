@@ -8,7 +8,7 @@ import { useAuth } from "@/context/authContext";
 import registerExpoToken, { setupNotifications } from "@/lib/push";
 import { callManager, IncomingCall } from "@/lib/callManager";
 import { IncomingCallNotification } from "@/components/IncomingCallNotification";
-import { useRouter } from "expo-router";
+import { navigate } from "@/lib/navigationService";
 const client = StreamChat.getInstance(chatApiKey);
 
 const AppContext = createContext({
@@ -28,7 +28,6 @@ export const AppProvider = ({ children }) => {
   const [thread, setThread] = useState(null);
   const [error, setError] = useState(null);
   const [incomingCall, setIncomingCall] = useState(null);
-  const router = useRouter();
   useEffect(() => {
     let cancelled = false;
 
@@ -72,25 +71,25 @@ export const AppProvider = ({ children }) => {
         if (!cancelled) {
           setChatClient(client);
           setError(null);
-          
+
           // Initialize call manager after chat client is ready
           try {
             await callManager.initialize(user.id, user.name);
-            
+
             // Listen for incoming calls
-            callManager.on('incomingCall', (call) => {
+            callManager.on("incomingCall", (call) => {
               setIncomingCall(call);
             });
-            
-            callManager.on('callEnded', () => {
+
+            callManager.on("callEnded", () => {
               setIncomingCall(null);
             });
-            
-            callManager.on('callAccepted', () => {
+
+            callManager.on("callAccepted", () => {
               setIncomingCall(null);
             });
           } catch (callError) {
-            console.warn('Failed to initialize call manager:', callError);
+            console.warn("Failed to initialize call manager:", callError);
           }
         }
       } catch (e) {
@@ -105,7 +104,7 @@ export const AppProvider = ({ children }) => {
       cancelled = true;
       client.disconnectUser().catch(() => {});
     };
-  }, [userId, userName, router]);
+  }, [userId, userName]);
 
   // Loader / errors
   if (!userId) return children; // let screens redirect to /login
@@ -151,14 +150,16 @@ export const AppProvider = ({ children }) => {
 
   const handleAcceptCall = async () => {
     if (incomingCall) {
-      try {
-        await callManager.acceptCall(incomingCall.callId);
-        setIncomingCall(null);
-      } catch (error) {
-        console.error("Failed to accept call:", error);
-        setIncomingCall(null);
-      }
+      setIncomingCall(null);
     }
+  };
+
+  const handleNavigateToCall = (callId, isVideoCall) => {
+    navigate("Call", {
+      callId,
+      status: "incoming",
+      ...(isVideoCall ? {} : { mode: "audio" }),
+    });
   };
 
   const handleDeclineCall = async () => {
@@ -195,6 +196,7 @@ export const AppProvider = ({ children }) => {
               isVideoCall={incomingCall.isVideoCall}
               onAccept={handleAcceptCall}
               onDecline={handleDeclineCall}
+              onNavigateToCall={handleNavigateToCall}
             />
           )}
         </Chat>

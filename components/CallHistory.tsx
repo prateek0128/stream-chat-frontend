@@ -25,7 +25,7 @@ class SimpleStorage {
 }
 
 const AsyncStorage = new SimpleStorage();
-import { useRouter } from 'expo-router';
+import { navigate } from '../lib/navigationService';
 import { fonts } from '../config/fonts';
 
 export interface CallHistoryItem {
@@ -47,7 +47,7 @@ const CALL_HISTORY_KEY = 'call_history';
 
 export const CallHistory: React.FC<CallHistoryProps> = ({ onCallPress }) => {
   const [callHistory, setCallHistory] = useState<CallHistoryItem[]>([]);
-  const router = useRouter();
+
 
   useEffect(() => {
     loadCallHistory();
@@ -162,9 +162,9 @@ export const CallHistory: React.FC<CallHistoryProps> = ({ onCallPress }) => {
       onCallPress(item.callId, item.type === 'video');
     } else {
       // Default behavior - start a new call
-      router.push({
-        pathname: `/call/${item.callId}`,
-        params: item.type === 'audio' ? { mode: 'audio' } : {},
+      navigate('Call', {
+        callId: item.callId,
+        ...(item.type === 'audio' ? { mode: 'audio' } : {}),
       });
     }
   };

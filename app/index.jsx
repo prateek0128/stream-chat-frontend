@@ -104,7 +104,6 @@ export default function ChannelListScreen() {
       <WhatsAppChannelList
         channels={mockChannels}
         onChannelSelect={(channelId) => {
-          // Extract user ID from channel ID and create chat
           const otherUserId = channelId.replace('messaging:', '');
           createChat(otherUserId);
         }}
@@ -151,6 +150,47 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   ctaText: {
+    color: "#fff",
+    fontFamily: fonts.semiBold,
+    fontSize: 16,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 40,
+    backgroundColor: "#fff",
+  },
+  emptyIcon: {
+    fontSize: 80,
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontFamily: fonts.semiBold,
+    color: "#333",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    fontFamily: fonts.regular,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 30,
+  },
+  startChatButton: {
+    backgroundColor: "#E91E63",
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 25,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  startChatText: {
     color: "#fff",
     fontFamily: fonts.semiBold,
     fontSize: 16,

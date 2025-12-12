@@ -150,19 +150,33 @@ export const WhatsAppChannelList: React.FC<WhatsAppChannelListProps> = ({
         renderItem={renderChannelItem}
         keyExtractor={(item, index) => item?.id || index.toString()}
         style={styles.list}
+        contentContainerStyle={filteredChannels.length === 0 ? styles.listEmpty : undefined}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
-        ListEmptyComponent={() =>
-          searchQuery.trim() ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="search" size={48} color="#ccc" />
-              <Text style={styles.emptyText}>No chats found</Text>
-              <Text style={styles.emptySubtext}>
-                Try searching with different keywords
-              </Text>
-            </View>
-          ) : null
-        }
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            {searchQuery.trim() ? (
+              <>
+                <Ionicons name="search" size={48} color="#ccc" />
+                <Text style={styles.emptyText}>No chats found</Text>
+                <Text style={styles.emptySubtext}>
+                  Try searching with different keywords
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.emptyIcon}>💬</Text>
+                <Text style={styles.emptyTitle}>No messages yet</Text>
+                <Text style={styles.emptySubtext}>
+                  Start a conversation by tapping the button below
+                </Text>
+                <TouchableOpacity style={styles.startChatButton} onPress={onNewChat}>
+                  <Text style={styles.startChatText}>Start Chat</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        )}
       />
 
       <TouchableOpacity style={styles.fab} onPress={onNewChat}>
@@ -450,12 +464,26 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     padding: 4,
   },
+  listEmpty: {
+    flex: 1,
+  },
   emptyContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 60,
     paddingHorizontal: 40,
+  },
+  emptyIcon: {
+    fontSize: 80,
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontFamily: fonts.semiBold,
+    color: "#333",
+    marginBottom: 12,
+    textAlign: "center",
   },
   emptyText: {
     fontSize: 18,
@@ -465,9 +493,26 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   emptySubtext: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: fonts.regular,
-    color: "#999",
+    color: "#666",
     textAlign: "center",
+    marginBottom: 30,
+  },
+  startChatButton: {
+    backgroundColor: "#E91E63",
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 25,
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  startChatText: {
+    color: "#fff",
+    fontFamily: fonts.semiBold,
+    fontSize: 16,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,9 +7,7 @@ import {
   Dimensions,
   Animated,
   Modal,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-
+} from "react-native";
 interface IncomingCallNotificationProps {
   visible: boolean;
   callerName: string;
@@ -17,20 +15,15 @@ interface IncomingCallNotificationProps {
   isVideoCall: boolean;
   onAccept: () => void;
   onDecline: () => void;
+  onNavigateToCall?: (callId: string, isVideoCall: boolean) => void;
 }
 
-const { width, height } = Dimensions.get('window');
+const { width, height } = Dimensions.get("window");
 
-export const IncomingCallNotification: React.FC<IncomingCallNotificationProps> = ({
-  visible,
-  callerName,
-  callId,
-  isVideoCall,
-  onAccept,
-  onDecline,
-}) => {
+export const IncomingCallNotification: React.FC<
+  IncomingCallNotificationProps
+> = ({ visible, callerName, callId, isVideoCall, onAccept, onDecline, onNavigateToCall }) => {
   const [pulseAnim] = useState(new Animated.Value(1));
-  const router = useRouter();
 
   useEffect(() => {
     if (visible) {
@@ -57,10 +50,7 @@ export const IncomingCallNotification: React.FC<IncomingCallNotificationProps> =
 
   const handleAccept = () => {
     onAccept();
-    router.push({
-      pathname: `/call/${callId}`,
-      params: isVideoCall ? {} : { mode: 'audio' },
-    });
+    onNavigateToCall?.(callId, isVideoCall);
   };
 
   if (!visible) return null;
@@ -77,19 +67,16 @@ export const IncomingCallNotification: React.FC<IncomingCallNotificationProps> =
           {/* Caller Info */}
           <View style={styles.callerInfo}>
             <Animated.View
-              style={[
-                styles.avatar,
-                { transform: [{ scale: pulseAnim }] },
-              ]}
+              style={[styles.avatar, { transform: [{ scale: pulseAnim }] }]}
             >
               <Text style={styles.avatarText}>
                 {callerName.charAt(0).toUpperCase()}
               </Text>
             </Animated.View>
-            
+
             <Text style={styles.callerName}>{callerName}</Text>
             <Text style={styles.callType}>
-              Incoming {isVideoCall ? 'video' : 'audio'} call...
+              Incoming {isVideoCall ? "video" : "audio"} call...
             </Text>
           </View>
 
@@ -128,54 +115,54 @@ export const IncomingCallNotification: React.FC<IncomingCallNotificationProps> =
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.9)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   container: {
     width: width * 0.9,
-    backgroundColor: '#E91E63',
+    backgroundColor: "#E91E63",
     borderRadius: 20,
     padding: 30,
-    alignItems: 'center',
+    alignItems: "center",
   },
   callerInfo: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 50,
   },
   avatar: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#AD1457',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#AD1457",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 20,
     borderWidth: 4,
-    borderColor: '#fff',
+    borderColor: "#fff",
   },
   avatarText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 48,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   callerName: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 28,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   callType: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
     opacity: 0.8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   actionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
     paddingHorizontal: 40,
     marginBottom: 30,
   },
@@ -183,40 +170,40 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     elevation: 5,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
   },
   declineButton: {
-    backgroundColor: '#ff4444',
-    transform: [{ rotate: '135deg' }],
+    backgroundColor: "#ff4444",
+    transform: [{ rotate: "135deg" }],
   },
   acceptButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
   },
   declineIcon: {
     fontSize: 28,
-    color: '#fff',
+    color: "#fff",
   },
   acceptIcon: {
     fontSize: 28,
-    color: '#fff',
+    color: "#fff",
   },
   quickActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 20,
   },
   quickActionButton: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   quickActionText: {
     fontSize: 20,

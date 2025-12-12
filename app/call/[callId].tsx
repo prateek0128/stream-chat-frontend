@@ -17,6 +17,7 @@ import {
   CallContent,
   Call,
   useCallStateHooks,
+  ParticipantView,
 } from "@stream-io/video-react-native-sdk";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -26,6 +27,42 @@ import {
 import { fonts } from "../../config/fonts";
 
 const { width, height } = Dimensions.get("window");
+
+// Custom Video Layout Component
+const CustomVideoLayout = ({ currentUserId }: { currentUserId: string }) => {
+  const { useLocalParticipant, useRemoteParticipants } = useCallStateHooks();
+  const localParticipant = useLocalParticipant();
+  const remoteParticipants = useRemoteParticipants();
+  const remoteParticipant = remoteParticipants[0];
+
+  return (
+    <View style={styles.videoCallContainer}>
+      {/* Main Video - Remote Participant (Other User) */}
+      {remoteParticipant ? (
+        <ParticipantView
+          participant={remoteParticipant}
+          style={styles.mainVideo}
+          trackType="videoTrack"
+        />
+      ) : (
+        <View style={styles.mainVideo}>
+          <Text style={styles.waitingText}>
+            Waiting for other participant...
+          </Text>
+        </View>
+      )}
+
+      {/* PIP Video - Local Participant (Self) */}
+      {localParticipant && (
+        <ParticipantView
+          participant={localParticipant}
+          style={styles.pipVideo}
+          trackType="videoTrack"
+        />
+      )}
+    </View>
+  );
+};
 
 // Custom Call Controls Component
 const WhatsAppCallControls = ({
@@ -53,16 +90,15 @@ const WhatsAppCallControls = ({
 
   const toggleAudio = async () => {
     try {
+      if (!call?.microphone) return;
       const newMutedState = !isMuted;
-      
+
       if (newMutedState) {
         await call.microphone.disable();
-        console.log('Microphone disabled');
       } else {
         await call.microphone.enable();
-        console.log('Microphone enabled');
       }
-      
+
       setIsMuted(newMutedState);
     } catch (error) {
       console.error("Error toggling audio:", error);
@@ -71,6 +107,7 @@ const WhatsAppCallControls = ({
 
   const toggleVideo = async () => {
     try {
+      if (!call?.camera) return;
       if (isVideoOff) {
         await call.camera.enable();
       } else {
@@ -82,10 +119,19 @@ const WhatsAppCallControls = ({
     }
   };
 
+  const flipCamera = async () => {
+    try {
+      if (!call?.camera) return;
+      await call.camera.flip();
+    } catch (error) {
+      console.error("Error flipping camera:", error);
+    }
+  };
+
   const toggleSpeaker = () => {
     const newSpeakerState = !isSpeakerOn;
     setIsSpeakerOn(newSpeakerState);
-    console.log('Speaker toggled to:', newSpeakerState);
+    console.log("Speaker toggled to:", newSpeakerState);
   };
 
   return (
@@ -122,12 +168,17 @@ const WhatsAppCallControls = ({
         </TouchableOpacity>
 
         {!audioOnly && (
-          <TouchableOpacity
-            style={[styles.controlButton, isVideoOff && styles.mutedButton]}
-            onPress={toggleVideo}
-          >
-            <Text style={styles.controlIcon}>{isVideoOff ? "📹" : "📷"}</Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              style={[styles.controlButton, isVideoOff && styles.mutedButton]}
+              onPress={toggleVideo}
+            >
+              <Text style={styles.controlIcon}>{isVideoOff ? "📹" : "📷"}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.controlButton} onPress={flipCamera}>
+              <Text style={styles.controlIcon}>🔄</Text>
+            </TouchableOpacity>
+          </>
         )}
 
         <TouchableOpacity style={styles.endCallButton} onPress={onEndCall}>
@@ -139,7 +190,7 @@ const WhatsAppCallControls = ({
 };
 
 export default function CallScreen() {
-  const route = useRoute();
+  const route = useRoute<any>();
   const { callId, mode, status } = route.params || {};
   const audioOnly = mode === "audio";
   const isOutgoingCall = status === "calling";
@@ -162,7 +213,7 @@ export default function CallScreen() {
   const [callStartTime, setCallStartTime] = useState<number | null>(null);
   const [otherParticipantName, setOtherParticipantName] =
     useState<string>("Unknown");
-  const [isCallAnswered, setIsCallAnswered] = useState(!isOutgoingCall);
+  const [isCallAnswered, setIsCallAnswered] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
 
   // Format call duration to MM:SS
@@ -223,36 +274,16 @@ export default function CallScreen() {
         c.on("call.session_participant_joined", async (event: any) => {
           console.log("Participant joined:", event);
 
-          // If this is an outgoing call and someone else joined, answer the call
-          if (isOutgoingCall && event.participant?.user?.id !== userId) {
-            console.log("Other participant joined outgoing call - joining now");
-            try {
-              await c.join();
-              // Configure media after joining
-              if (audioOnly) {
-                await c.camera.disable();
-                // Start with microphone disabled
-              } else {
-                await c.camera.enable();
-                // Start with microphone disabled
-              }
-
-              setIsCallAnswered(true);
-              console.log("Successfully joined and configured media");
-            } catch (error) {
-              console.error("Failed to join call after answer:", error);
-            }
-          }
-
-          if (!callStartTime) {
-            setCallStartTime(Date.now());
-          }
           // Get participant name
           if (
             event.participant?.user?.name &&
             event.participant.user.id !== userId
           ) {
             setOtherParticipantName(event.participant.user.name);
+          }
+
+          if (!callStartTime && mounted) {
+            setCallStartTime(Date.now());
           }
         });
 
@@ -297,35 +328,42 @@ export default function CallScreen() {
           }
         });
 
-        // Only join if it's not an outgoing call in "calling" status
-        if (!isOutgoingCall) {
-          console.log("Joining call...");
-          await c.join();
-          console.log("Call joined successfully");
-
-          // Configure media only after joining
-          try {
-            if (audioOnly) {
-              await c.camera.disable();
-              // Start with microphone disabled
-              console.log("Audio-only call configured");
-            } else {
-              await c.camera.enable();
-              // Start with microphone disabled
-              console.log("Video call configured");
-            }
-          } catch (mediaError) {
-            console.warn("Media configuration error:", mediaError);
+        // Both users join the call
+        try {
+          if (isOutgoingCall) {
+            console.log("Caller creating and joining call...");
+            await c.getOrCreate();
+          } else {
+            console.log("Receiver joining call...");
           }
-        } else {
-          console.log("Outgoing call - waiting for answer before joining");
-        }
 
-        if (mounted) {
-          setClient(vc);
-          setCall(c);
-          setIsConnecting(false);
-          console.log("Call setup completed successfully");
+          // Join with camera enabled for video calls
+          if (!audioOnly) {
+            console.log("Joining with camera enabled...");
+            await c.join({ create: isOutgoingCall });
+            await c.camera.enable();
+            await c.microphone.enable();
+            console.log("Joined with video and audio");
+          } else {
+            await c.join({ create: isOutgoingCall });
+            await c.microphone.enable();
+            console.log("Joined with audio only");
+          }
+
+          if (mounted) {
+            setClient(vc);
+            setCall(c);
+            setIsCallAnswered(true);
+            setCallStartTime(Date.now());
+            setIsConnecting(false);
+          }
+        } catch (joinError: any) {
+          console.error("Failed to join call:", joinError);
+          if (mounted) {
+            setErr(new Error(joinError.message || "Failed to join call"));
+            setIsConnecting(false);
+          }
+          return;
         }
       } catch (e: any) {
         console.error("Call setup error:", e);
@@ -386,7 +424,11 @@ export default function CallScreen() {
             <Text style={styles.avatarText}>👤</Text>
           </View>
           <Text style={styles.callingText}>
-            {audioOnly ? "Starting audio call..." : "Starting video call..."}
+            {isCallAnswered
+              ? "Connecting..."
+              : audioOnly
+              ? "Starting audio call..."
+              : "Starting video call..."}
           </Text>
           <ActivityIndicator size="large" color="#fff" style={styles.loader} />
           <TouchableOpacity
@@ -401,7 +443,7 @@ export default function CallScreen() {
   }
 
   // Show calling UI for outgoing calls that haven't been answered
-  if (isOutgoingCall && !isCallAnswered) {
+  if (isOutgoingCall && !isCallAnswered && callStartTime === null) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <View style={styles.loadingContent}>
@@ -441,7 +483,7 @@ export default function CallScreen() {
             </View>
           ) : (
             <View style={styles.videoCallContainer}>
-              <CallContent />
+              <CustomVideoLayout currentUserId={String(userId)} />
               <WhatsAppCallControls
                 audioOnly={false}
                 onEndCall={handleEndCall}
@@ -571,6 +613,39 @@ const styles = StyleSheet.create({
   },
   videoCallContainer: {
     flex: 1,
+  },
+  fullScreenVideo: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+  },
+  mainVideo: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  pipVideo: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    width: 120,
+    height: 160,
+    borderRadius: 10,
+    overflow: "hidden",
+    borderWidth: 2,
+    borderColor: "#fff",
+    zIndex: 999,
+    elevation: 999,
+  },
+  waitingText: {
+    color: "#fff",
+    fontSize: 18,
+    fontFamily: fonts.regular,
+    textAlign: "center",
+    marginTop: 100,
   },
   controlsContainer: {
     position: "absolute",
