@@ -4,13 +4,20 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { navigationRef } from "./lib/navigationService";
 import { ChatWrapper } from "./components/chatWrapper";
 import { WhatsAppStatusBar } from "./components/WhatsAppStatusBar";
 import { AuthProvider } from "./context/authContext";
 import { AppProvider } from "./context/appContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { setupNotificationListeners, setupNotifications } from "./lib/push";
-import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from "@expo-google-fonts/inter";
 import * as SplashScreen from "expo-splash-screen";
 
 // Import screens from app folder
@@ -31,32 +38,31 @@ const Stack = createNativeStackNavigator();
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
-  const navigationRef = useRef();
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
   });
-  
+
   useEffect(() => {
     if (fontsLoaded) {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
-  
+
   useEffect(() => {
-    if (!fontsLoaded || !navigationRef.current) return;
-    
+    if (!fontsLoaded) return;
+
     // Setup notifications with navigation reference
     const timer = setTimeout(() => {
-      setupNotifications(navigationRef.current);
-      setupNotificationListeners(navigationRef.current);
+      setupNotifications(navigationRef);
+      setupNotificationListeners(navigationRef);
     }, 5000);
-    
+
     return () => clearTimeout(timer);
   }, [fontsLoaded]);
-  
+
   if (!fontsLoaded) {
     return null;
   }
@@ -77,9 +83,18 @@ export default function App() {
                     <Stack.Screen name="Thread" component={ThreadScreen} />
                     <Stack.Screen name="Call" component={CallScreen} />
                     <Stack.Screen name="Calls" component={CallsScreen} />
-                    <Stack.Screen name="BlockedAccounts" component={BlockedAccountsScreen} />
-                    <Stack.Screen name="CreateGroup" component={CreateGroupScreen} />
-                    <Stack.Screen name="ProfileSettings" component={ProfileSettingsScreen} />
+                    <Stack.Screen
+                      name="BlockedAccounts"
+                      component={BlockedAccountsScreen}
+                    />
+                    <Stack.Screen
+                      name="CreateGroup"
+                      component={CreateGroupScreen}
+                    />
+                    <Stack.Screen
+                      name="ProfileSettings"
+                      component={ProfileSettingsScreen}
+                    />
                     <Stack.Screen name="Users" component={UsersScreen} />
                     <Stack.Screen name="Health" component={HealthScreen} />
                   </Stack.Navigator>
@@ -93,6 +108,6 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({ 
-  container: { flex: 1 } 
+const styles = StyleSheet.create({
+  container: { flex: 1 },
 });

@@ -38,12 +38,17 @@ export default function ChannelScreen() {
   const navigation = useNavigation();
   const { chatClient, callManager } = useAppContext();
   const { colors } = useTheme();
-
   const [channel, setChannel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const inputRef = useRef(null);
+  const {
+    handleSendMessage: wsSendMessage,
+    handleTyping,
+    messages: wsMessages,
+    selectedUser,
+  } = useWebSocket();
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", () =>
       setKeyboardVisible(true)
@@ -197,7 +202,11 @@ export default function ChannelScreen() {
         await callManager.startCall(id, memberIds, false);
 
         // Show outgoing call UI immediately
-        navigation.navigate("Call", { callId: id, mode: "audio", status: "calling" });
+        navigation.navigate("Call", {
+          callId: id,
+          mode: "audio",
+          status: "calling",
+        });
       } else {
         throw new Error("Call manager not ready. Please try again.");
       }
@@ -216,9 +225,44 @@ export default function ChannelScreen() {
     );
     return otherMember?.user?.name || otherMember?.user?.id || "Chat";
   };
+  const handleStreamSendMessage = async (message) => {
+    const text = (message.text || "").trim();
+    if (!text) return;
+
+    // 1) Send via your WebSocket backend
+    await wsSendMessage(text); // calls WebSocketProvider.handleSendMessage
+
+    // 2) Optimistic UI update in Stream channel
+    const streamMsg = {
+      id: "temp-" + Date.now(),
+      text,
+      type: "regular",
+      user: {
+        id: chatClient.userID,
+        name: chatClient.user?.name || "You",
+      },
+      created_at: new Date().toISOString(),
+      status: "sending",
+    };
+
+    channel.state.addMessageSorted(streamMsg);
+    channel.state.updateMessage(streamMsg);
+  };
+
+  // Typing indicators by WebSocket
+  const handleTypingStart = () => {
+    handleTyping(true);
+  };
+
+  const handleTypingStop = () => {
+    handleTyping(false);
+  };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.primary }]} edges={["top"]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.primary }]}
+      edges={["top"]}
+    >
       <WhatsAppChatHeader
         channelName={getChannelDisplayName()}
         onVideoCall={handleVideoCall}
@@ -230,191 +274,204 @@ export default function ChannelScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <WhatsAppBackground key={colors.background}>
-          <Channel
-            theme={{
-              ...whatsappChatTheme,
-              messageList: {
-                ...whatsappChatTheme.messageList,
-                container: {
-                  ...whatsappChatTheme.messageList.container,
-                  backgroundColor: colors.background,
+          <WhatsAppBackground key={colors.background}>
+            <Channel
+              theme={{
+                ...whatsappChatTheme,
+                messageList: {
+                  ...whatsappChatTheme.messageList,
+                  container: {
+                    ...whatsappChatTheme.messageList.container,
+                    backgroundColor: colors.background,
+                  },
                 },
-              },
-            }}
-            channel={channel}
-            /* ---------------------------
+              }}
+              channel={channel}
+              /* ---------------------------
      🔥 MessageInput Core Features
      --------------------------- */
-            audioRecordingEnabled={true}
-            hasImagePicker={true}
-            hasFilePicker={true}
-            hasCameraPicker={true}
-            showAttachmentPickerBottomSheet={true}
-            /* ---------------------------
+              audioRecordingEnabled={true}
+              hasImagePicker={true}
+              hasFilePicker={true}
+              hasCameraPicker={true}
+              showAttachmentPickerBottomSheet={true}
+              /* ---------------------------
      🔥 Attachment Picker
      --------------------------- */
-            attachmentPickerBottomSheetHeight={0.4} // 40% of screen height
-            attachmentSelectionBarHeight={52}
-            closeAttachmentPicker={() => {}} // Optional override
-            /* ---------------------------
+              attachmentPickerBottomSheetHeight={0.4} // 40% of screen height
+              attachmentSelectionBarHeight={52}
+              closeAttachmentPicker={() => {}} // Optional override
+              /* ---------------------------
      🔥 Text Input Customization
      --------------------------- */
-            additionalTextInputProps={{
-              placeholder: "Message",
-              placeholderTextColor: "#8696A0",
-              multiline: true,
-              style: {
-                fontSize: 16,
-                color: "#000",
-                fontFamily: fonts.regular,
-              },
-            }}
-            inputBoxRef={inputRef}
-            /* ---------------------------
-     🔥 Audio Recording Controls
-     --------------------------- */
-            asyncMessagesMinimumPressDuration={500} // long press before recording starts
-            asyncMessagesLockDistance={50} // slide-up to lock recording
-            asyncMessagesSlideToCancelDistance={100} // slide-left to cancel
-            AsyncMessagesMultiSendEnabled={true} // allow multiple voice snippets
-            asyncMessagesLockEnabled={true}
-            /* ---------------------------
-     🔥 Poll Creation
-     --------------------------- */
-            showPollCreationDialog={false} // true if using polls
-            closePollCreationDialog={() => {}}
-            /* ---------------------------
-     🔥 Channel State
-     --------------------------- */
-            isOnline={true}
-            threadList={false} // set true inside Thread component
-            watchers={{}}
-            members={{}}
-            cooldownEndsAt={null}
-            /* ---------------------------
-     🔥 Sending Message
-     --------------------------- */
-            // sendMessage={sendMessageFn}
-            /* ---------------------------
-     🔥 UI Overrides (EVERY slot enabled)
-     ----------------------------------- */
-
-            // // Attachment / File Previews
-            // AttachmentUploadPreviewList={AttachmentUploadPreviewList}
-            // AttachmentPickerSelectionBar={AttachmentPickerSelectionBar}
-            // // Audio recording UI
-            // AudioRecorder={AudioRecorder}
-            // AudioRecordingInProgress={AudioRecordingInProgress}
-            // AudioRecordingPreview={AudioRecordingPreview}
-            // AudioRecordingLockIndicator={AudioRecordingLockIndicator}
-            // AudioRecordingWaveform={AudioRecordingWaveform}
-            // // Input Areas
-            // Input={MessageInputUI} // your custom UI
-            // InputButtons={InputButtonsUI} // custom left+right icons
-            // InputEditingStateHeader={InputEditingStateHeader}
-            // InputReplyStateHeader={InputReplyStateHeader}
-            // // Reply Component
-            // Reply={ReplyPreview}
-            // // Dropdown UI / Suggestions
-            // AutoCompleteSuggestionList={AutoCompleteSuggestionList}
-            // // Send Button
-            // SendButton={SendButton}
-            // // Thread checkbox message
-            // ShowThreadMessageInChannelButton={ShowThreadMessageInChannelButton}
-            // // Audio Buttons
-            // StartAudioRecordingButton={StartAudioRecordingButton}
-            // // Streaming / AI Generation
-            // StopMessageStreamingButton={StopMessageStreamingButton}
-            // // Replace native TextInput
-            // TextInputComponent={TextInput}
-            // // Commands UI
-            // CommandInput={CommandInput}
-            // // Poll UI
-            // CreatePollContent={CreatePollContent}
-            // // Cooldown
-            // CooldownTimer={CooldownTimer}
-          >
-            <MessageList
-              onThreadSelect={(parentMessage) => {
-                navigation.navigate("Thread", { cid, mid: parentMessage?.id });
-              }}
-            />
-            <MessageInput
-              /* ------------------------------------
-     🔥 Core Feature Toggles
-     ------------------------------------ */
-              hasCommands={true}
-              hasFilePicker={true}
-              hasImagePicker={true}
-              hasCameraPicker={true}
-              audioRecordingEnabled={true}
-              showAttachmentPickerBottomSheet={false}
-              /* ------------------------------------
-     🔥 TextInput Config
-     ------------------------------------ */
               additionalTextInputProps={{
+                placeholder: "Message",
+                placeholderTextColor: "#8696A0",
+                multiline: true,
                 style: {
                   fontSize: 16,
                   color: "#000",
                   fontFamily: fonts.regular,
                 },
-                width: "100%",
-                placeholder: "Message",
-                placeholderTextColor: "#777",
-                fontFamily: fonts.regular,
-                multiline: true,
-                padding: 12,
+                onFocus: handleTypingStart,
+                onBlur: handleTypingStop,
+                onChangeText: (text) => {
+                  if (text.length > 0) {
+                    handleTypingStart();
+                  } else {
+                    handleTypingStop();
+                  }
+                },
               }}
-              /* ------------------------------------
+              inputBoxRef={inputRef}
+              /* ---------------------------
+     🔥 Audio Recording Controls
+     --------------------------- */
+              asyncMessagesMinimumPressDuration={500} // long press before recording starts
+              asyncMessagesLockDistance={50} // slide-up to lock recording
+              asyncMessagesSlideToCancelDistance={100} // slide-left to cancel
+              AsyncMessagesMultiSendEnabled={true} // allow multiple voice snippets
+              asyncMessagesLockEnabled={true}
+              /* ---------------------------
+     🔥 Poll Creation
+     --------------------------- */
+              showPollCreationDialog={false} // true if using polls
+              closePollCreationDialog={() => {}}
+              /* ---------------------------
+     🔥 Channel State
+     --------------------------- */
+              isOnline={true}
+              threadList={false} // set true inside Thread component
+              watchers={{}}
+              members={{}}
+              cooldownEndsAt={null}
+              /* ---------------------------
+     🔥 Sending Message
+     --------------------------- */
+              // sendMessage={sendMessageFn}
+              /* ---------------------------
+     🔥 UI Overrides (EVERY slot enabled)
+     ----------------------------------- */
+
+              // // Attachment / File Previews
+              // AttachmentUploadPreviewList={AttachmentUploadPreviewList}
+              // AttachmentPickerSelectionBar={AttachmentPickerSelectionBar}
+              // // Audio recording UI
+              // AudioRecorder={AudioRecorder}
+              // AudioRecordingInProgress={AudioRecordingInProgress}
+              // AudioRecordingPreview={AudioRecordingPreview}
+              // AudioRecordingLockIndicator={AudioRecordingLockIndicator}
+              // AudioRecordingWaveform={AudioRecordingWaveform}
+              // // Input Areas
+              // Input={MessageInputUI} // your custom UI
+              // InputButtons={InputButtonsUI} // custom left+right icons
+              // InputEditingStateHeader={InputEditingStateHeader}
+              // InputReplyStateHeader={InputReplyStateHeader}
+              // // Reply Component
+              // Reply={ReplyPreview}
+              // // Dropdown UI / Suggestions
+              // AutoCompleteSuggestionList={AutoCompleteSuggestionList}
+              // // Send Button
+              // SendButton={SendButton}
+              // // Thread checkbox message
+              // ShowThreadMessageInChannelButton={ShowThreadMessageInChannelButton}
+              // // Audio Buttons
+              // StartAudioRecordingButton={StartAudioRecordingButton}
+              // // Streaming / AI Generation
+              // StopMessageStreamingButton={StopMessageStreamingButton}
+              // // Replace native TextInput
+              // TextInputComponent={TextInput}
+              // // Commands UI
+              // CommandInput={CommandInput}
+              // // Poll UI
+              // CreatePollContent={CreatePollContent}
+              // // Cooldown
+              // CooldownTimer={CooldownTimer}
+            >
+              <MessageList
+                onThreadSelect={(parentMessage) => {
+                  navigation.navigate("Thread", {
+                    cid,
+                    mid: parentMessage?.id,
+                  });
+                }}
+              />
+              <MessageInput
+                /* ------------------------------------
+     🔥 Core Feature Toggles
+     ------------------------------------ */
+                hasCommands={true}
+                hasFilePicker={true}
+                hasImagePicker={true}
+                hasCameraPicker={true}
+                audioRecordingEnabled={true}
+                showAttachmentPickerBottomSheet={false}
+                /* ------------------------------------
+     🔥 TextInput Config
+     ------------------------------------ */
+                additionalTextInputProps={{
+                  style: {
+                    fontSize: 16,
+                    color: "#000",
+                    fontFamily: fonts.regular,
+                  },
+                  width: "100%",
+                  placeholder: "Message",
+                  placeholderTextColor: "#777",
+                  fontFamily: fonts.regular,
+                  multiline: true,
+                  padding: 12,
+                }}
+                sendMessage={handleStreamSendMessage}
+                /* ------------------------------------
      🔥 FULL CUSTOM INPUT UI
      ------------------------------------ */
-              // Input={CustomInputUI}
-              //Input={WhatsAppMessageInputUI}
-              /* ------------------------------------
+                // Input={CustomInputUI}
+                //Input={WhatsAppMessageInputUI}
+                /* ------------------------------------
      🔥 UI OVERRIDE SLOTS — ALL ENABLED
      ------------------------------------ */
 
-              // Upload preview inside input bar
-              // AttachmentUploadPreviewList={CustomAttachmentPreviewList}
-              // // Sliding attachment picker icons (image, file, camera)
-              // AttachmentPickerSelectionBar={CustomAttachmentPickerSelectionBar}
-              // /* --- Audio Recording UI --- */
-              // AudioRecorder={CustomAudioRecorder}
-              // AudioRecordingInProgress={CustomAudioRecordingInProgress}
-              // AudioRecordingLockIndicator={CustomAudioRecordingLockIndicator}
-              // AudioRecordingPreview={CustomAudioRecordingPreview}
-              // AudioRecordingWaveform={CustomAudioRecordingWaveform}
-              // /* --- Suggestions dropdown (commands, mentions, emojis) --- */
-              // AutoCompleteSuggestionList={CustomAutoCompleteSuggestionList}
-              // /* --- Input State Headers (reply, edit) --- */
-              // InputEditingStateHeader={CustomInputEditingStateHeader}
-              // InputReplyStateHeader={CustomInputReplyStateHeader}
-              // /* --- Reply Preview inside input --- */
-              // Reply={CustomReplyPreview}
-              // /* --- Left & Right Buttons --- */
-              // InputButtons={CustomInputButtons}
-              // /* --- Send Button --- */
-              // SendButton={CustomSendButton} // WhatsApp green send button here
-              // /* --- Thread checkbox button --- */
-              // ShowThreadMessageInChannelButton={
-              //   CustomShowThreadMessageInChannelButton
-              // }
-              // /* --- Audio Recording Icon --- */
-              // StartAudioRecordingButton={CustomStartAudioRecordingButton}
-              // /* --- AI Streaming UI --- */
-              // StopMessageStreamingButton={CustomStopMessageStreamingButton}
-              // /* --- Replace native input (use for emoji integration) --- */
-              // TextInputComponent={CustomTextInputComponent}
-              // /* --- Commands UI --- */
-              // CommandInput={CustomCommandInput}
-              // /* --- Poll creation UI --- */
-              // CreatePollContent={CustomCreatePollContent}
-              // /* --- Cooldown timer (for slow-mode channels) --- */
-              // CooldownTimer={CustomCooldownTimer}
-            />
-          </Channel>
-        </WhatsAppBackground>
+                // Upload preview inside input bar
+                // AttachmentUploadPreviewList={CustomAttachmentPreviewList}
+                // // Sliding attachment picker icons (image, file, camera)
+                // AttachmentPickerSelectionBar={CustomAttachmentPickerSelectionBar}
+                // /* --- Audio Recording UI --- */
+                // AudioRecorder={CustomAudioRecorder}
+                // AudioRecordingInProgress={CustomAudioRecordingInProgress}
+                // AudioRecordingLockIndicator={CustomAudioRecordingLockIndicator}
+                // AudioRecordingPreview={CustomAudioRecordingPreview}
+                // AudioRecordingWaveform={CustomAudioRecordingWaveform}
+                // /* --- Suggestions dropdown (commands, mentions, emojis) --- */
+                // AutoCompleteSuggestionList={CustomAutoCompleteSuggestionList}
+                // /* --- Input State Headers (reply, edit) --- */
+                // InputEditingStateHeader={CustomInputEditingStateHeader}
+                // InputReplyStateHeader={CustomInputReplyStateHeader}
+                // /* --- Reply Preview inside input --- */
+                // Reply={CustomReplyPreview}
+                // /* --- Left & Right Buttons --- */
+                // InputButtons={CustomInputButtons}
+                // /* --- Send Button --- */
+                // SendButton={CustomSendButton} // WhatsApp green send button here
+                // /* --- Thread checkbox button --- */
+                // ShowThreadMessageInChannelButton={
+                //   CustomShowThreadMessageInChannelButton
+                // }
+                // /* --- Audio Recording Icon --- */
+                // StartAudioRecordingButton={CustomStartAudioRecordingButton}
+                // /* --- AI Streaming UI --- */
+                // StopMessageStreamingButton={CustomStopMessageStreamingButton}
+                // /* --- Replace native input (use for emoji integration) --- */
+                // TextInputComponent={CustomTextInputComponent}
+                // /* --- Commands UI --- */
+                // CommandInput={CustomCommandInput}
+                // /* --- Poll creation UI --- */
+                // CreatePollContent={CustomCreatePollContent}
+                // /* --- Cooldown timer (for slow-mode channels) --- */
+                // CooldownTimer={CustomCooldownTimer}
+              />
+            </Channel>
+          </WhatsAppBackground>
         </View>
       </KeyboardAvoidingView>
       <SafeAreaView style={styles.bottomSafeArea} edges={["bottom"]} />
