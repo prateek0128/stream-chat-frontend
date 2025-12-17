@@ -38,17 +38,12 @@ export default function ChannelScreen() {
   const navigation = useNavigation();
   const { chatClient, callManager } = useAppContext();
   const { colors } = useTheme();
+
   const [channel, setChannel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const inputRef = useRef(null);
-  const {
-    handleSendMessage: wsSendMessage,
-    handleTyping,
-    messages: wsMessages,
-    selectedUser,
-  } = useWebSocket();
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", () =>
       setKeyboardVisible(true)
@@ -225,38 +220,6 @@ export default function ChannelScreen() {
     );
     return otherMember?.user?.name || otherMember?.user?.id || "Chat";
   };
-  const handleStreamSendMessage = async (message) => {
-    const text = (message.text || "").trim();
-    if (!text) return;
-
-    // 1) Send via your WebSocket backend
-    await wsSendMessage(text); // calls WebSocketProvider.handleSendMessage
-
-    // 2) Optimistic UI update in Stream channel
-    const streamMsg = {
-      id: "temp-" + Date.now(),
-      text,
-      type: "regular",
-      user: {
-        id: chatClient.userID,
-        name: chatClient.user?.name || "You",
-      },
-      created_at: new Date().toISOString(),
-      status: "sending",
-    };
-
-    channel.state.addMessageSorted(streamMsg);
-    channel.state.updateMessage(streamMsg);
-  };
-
-  // Typing indicators by WebSocket
-  const handleTypingStart = () => {
-    handleTyping(true);
-  };
-
-  const handleTypingStop = () => {
-    handleTyping(false);
-  };
 
   return (
     <SafeAreaView
@@ -312,15 +275,6 @@ export default function ChannelScreen() {
                   fontSize: 16,
                   color: "#000",
                   fontFamily: fonts.regular,
-                },
-                onFocus: handleTypingStart,
-                onBlur: handleTypingStop,
-                onChangeText: (text) => {
-                  if (text.length > 0) {
-                    handleTypingStart();
-                  } else {
-                    handleTypingStop();
-                  }
                 },
               }}
               inputBoxRef={inputRef}
@@ -422,7 +376,6 @@ export default function ChannelScreen() {
                   multiline: true,
                   padding: 12,
                 }}
-                sendMessage={handleStreamSendMessage}
                 /* ------------------------------------
      🔥 FULL CUSTOM INPUT UI
      ------------------------------------ */
